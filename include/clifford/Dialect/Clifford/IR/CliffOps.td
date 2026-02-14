@@ -25,6 +25,6 @@ def Cliff_QuadProdOp : Cliff_Op<"quad_prod", []> {
     $LHS`,` $RHS attr-dict `:` type($LHS) `*` type($RHS) `->` type($out)
     }];
 
-    let hasVerifier = 1;
+    // let hasVerifier = 1;
 }
 

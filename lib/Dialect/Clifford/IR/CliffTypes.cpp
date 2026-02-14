@@ -9,7 +9,7 @@
 using namespace mlir;
 using namespace mlir::cliff;
 
-#define GET_TYPEDEF_CLASSES
-#include "clifford/Dialect/Clifford/IR/CliffTypes.cpp.inc"
+// #define GET_TYPEDEF_CLASSES
+// #include "clifford/Dialect/Clifford/IR/CliffTypes.cpp.inc"
 
 
