@@ -1,5 +1,7 @@
 add_clifford_library(CliffordIR
     Dialect.cpp
+    CliffOps.cpp
+    CliffTypes.cpp
 
     DEPENDS
     CliffordIRTableGen

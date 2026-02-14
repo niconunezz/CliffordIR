@@ -7,5 +7,12 @@
 
 #include "mlir/IR/DialectImplementation.h"
 #include "clifford/Dialect/Clifford/IR/Dialect.h.inc"
+#include "clifford/Dialect/Clifford/IR/CliffTypes.h"
+
+#define GET_OP_CLASSES
+#include "clifford/Dialect/Clifford/IR/CliffOps.h.inc"
+
+
+
 
 #endif

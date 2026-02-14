@@ -1,3 +1,6 @@
+#ifndef CLIFFORD_DIALECT
+#define CLIFFORD_DIALECT
+
 include "mlir/Pass/PassBase.td"
 include "mlir/IR/DialectBase.td"
 
@@ -9,3 +12,5 @@ def Cliff_Dialect : Dialect {
     let description = "A dialect for clifford algebra, for computer graphics or robotics";
     let cppNamespace = "::mlir::cliff";
 }
+
+#endif // CLIFFORD_DIALECT

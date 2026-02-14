@@ -52,9 +52,6 @@ function(add_clifford_plugin name)
   add_clifford_object(${name} ${ARGN})
 endfunction()
 
-
-
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 include_directories(".")
