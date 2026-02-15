@@ -11,16 +11,19 @@ def Cliff_FloatTensor : RankedTensorOf<[Cliff_Float]>;
 def Cliff_FloatLike : AnyTypeOf<[Cliff_Float, Cliff_FloatTensor]>;
 
 
-def Cliff_Quaternion : Cliff_Type<"Cliff_Quaternion", "quat"> {
-    let summary = "A type for representing numbers of the quaternion set";
+def Cliff_Multivector : Cliff_Type<"Cliff_Multivector", "multivector"> {
+    let summary = "A type for representing objects in cliffords algebra";
     let description = [{
-        The `Quaternion` type allows you to represent numbers of the quaternion set,
-        which have the form $a + bi + cj + dk$ and follow the rule
-        $$i^2 = j^2 = k^2 = ijk = -1$$
+        The `Multivector` type allows you to represent numbers of the cliffords
+        algebra set of numbers.
     
     }];
 
-    let parameters = (ins "Type":$dtype);
-
-    let assemblyFormat = "`<` $dtype `>`";
+    let parameters = (ins "int":$dim, "uint64_t":$mask, "Type":$dtype);
+    let assemblyFormat = "`<` $dim `,` $mask `,` $dtype `>`";
 }
+
+def Cliff_MultivctTensor : RankedTensorOf<[Cliff_Multivector]>;
+
+
+def Cliff_AnyType : AnyTypeOf<[Cliff_Multivector, Cliff_MultivctTensor, Cliff_FloatLike]>;
