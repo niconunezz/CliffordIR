@@ -15,6 +15,9 @@ set(LLVM_TARGET_DEFINITIONS CliffTypes.td)
 mlir_tablegen(CliffTypes.h.inc -gen-typedef-decls -dialect=diss)
 mlir_tablegen(CliffTypes.cpp.inc -gen-typedef-defs -dialect=diss)
 
+set(LLVM_TARGET_DEFINITIONS CliffAttrDefs.td)
+mlir_tablegen(CliffAttrDefs.h.inc -gen-attrdef-decls)
+mlir_tablegen(CliffAttrDefs.cpp.inc -gen-attrdef-defs)
 
 
 add_public_tablegen_target(CliffordIRTableGen)

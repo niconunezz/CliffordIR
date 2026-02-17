@@ -12,6 +12,7 @@ def Cliff_Dialect : Dialect {
     let description = "A dialect for clifford algebra, for computer graphics or robotics";
     let cppNamespace = "::mlir::cliff";
     let useDefaultTypePrinterParser = 1;
+    let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // CLIFFORD_DIALECT
