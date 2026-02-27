@@ -83,7 +83,7 @@ def Cliff_ret : Cliff_Op<"ret", [Pure, HasParent<"FuncOp">, MemRefsNormalizable,
 }
 
 
-def Cliff_GeoProd : Cliff_Op<"geo_prod", [SameOperandsAndResultType]> {
+def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure, SameOperandsAndResultType]> {
     let summary = "Compute the geometric product between two multivectors";
 
     let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);

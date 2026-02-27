@@ -16,5 +16,5 @@ def update_robot_arm_kernel(points_ptr, axis_start, axis_end, angle, distance):
 def update_robot_arm():
     # B, x, y, z 
     points = ...
-
-    update_robot_arm_kernel[()](points)
+    grid = ()
+    update_robot_arm_kernel[grid](points)

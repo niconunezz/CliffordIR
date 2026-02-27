@@ -14,7 +14,6 @@ def AlgebraDefinition : Cliff_Attr<"CliffordAlgebra", "algebra_definition", []> 
     let summary = "Attribute that defines the characteristic of our clifford algebra";
     let parameters = (ins "unsigned":$p, "unsigned":$q, "unsigned":$r);
 
-
     let hasCustomAssemblyFormat = 1;
     let genVerifyDecl = 1;
 }
