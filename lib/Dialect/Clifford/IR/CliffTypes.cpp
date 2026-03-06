@@ -1,10 +1,11 @@
-#include "clifford/Dialect/Clifford/IR/CliffTypes.h"
 
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "clifford/Dialect/Clifford/IR/Dialect.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+#include "clifford/Dialect/Clifford/IR/Dialect.h"
+#include "clifford/Dialect/Clifford/IR/CliffTypes.h"
 
 using namespace mlir;
 using namespace mlir::cliff;

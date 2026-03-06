@@ -20,8 +20,8 @@ def Cliff_Multivector : Cliff_Type<"Cliff_Multivector", "multivector"> {
     
     }];
 
-    let parameters = (ins "int":$dim, "uint64_t":$mask, "Type":$dtype);
-    let assemblyFormat = "`<` $dim `,` $mask `,` $dtype `>`";
+    let parameters = (ins "int":$dim, "uint64_t":$mask, "Type":$dtype, "CliffordAlgebraAttr" : $space);
+    let assemblyFormat = "`<` $dim `,` $mask `,` $dtype `,` $space `>`";
 }
 
 def Cliff_MultivctTensor : RankedTensorOf<[Cliff_Multivector]>;
