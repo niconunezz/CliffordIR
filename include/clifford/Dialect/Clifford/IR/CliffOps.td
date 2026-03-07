@@ -83,6 +83,19 @@ def Cliff_ret : Cliff_Op<"ret", [Pure, HasParent<"FuncOp">, MemRefsNormalizable,
 }
 
 
+def Cliff_Add : Cliff_Op<"add", [Pure]> {
+    let summary = "Compute the addition between two multivectors";
+
+    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `+` type($rhs) `->` type($out)";
+
+    let hasVerifier = 1;
+}
+
+
 def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
     let summary = "Compute the geometric product between two multivectors";
 
@@ -96,50 +109,72 @@ def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
 }
 
 
-def Cliff_Vee : Cliff_Op<"vee", [Pure, SameOperandsAndResultType]> {
+def Cliff_Vee : Cliff_Op<"vee", [Pure]> {
     let summary = "Compute the vee between two multivectors";
 
     let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
     let results = (outs Cliff_MultivctTensor:$out);
 
     // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
-    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($out)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
+
 
     // let hasVerifier = 1;
 }
 
-def Cliff_Wedge : Cliff_Op<"wedge", [Pure, SameOperandsAndResultType]> {
+def Cliff_Wedge : Cliff_Op<"wedge", [Pure]> {
     let summary = "Compute the wedge between two multivectors";
 
     let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
     let results = (outs Cliff_MultivctTensor:$out);
 
-    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
-    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($out)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
 
     // let hasVerifier = 1;
 }
 
-def Cliff_Dot : Cliff_Op<"dot", [Pure, SameOperandsAndResultType]> {
+def Cliff_Dot : Cliff_Op<"dot", [Pure]> {
     let summary = "Compute the dot between two multivectors";
 
     let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
     let results = (outs Cliff_MultivctTensor:$out);
 
-    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
-    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($out)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
+
 
     // let hasVerifier = 1;
 }
 
-def Cliff_Sandwich : Cliff_Op<"sandwich", [Pure, SameOperandsAndResultType]> {
+def Cliff_Sandwich : Cliff_Op<"sandwich", [Pure]> {
     let summary = "Compute the sandwich between two multivectors";
 
     let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
     let results = (outs Cliff_MultivctTensor:$out);
 
-    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
-    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($out)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
+
+    // let hasVerifier = 1;
+}
+
+def Cliff_Dual : Cliff_Op<"dual", [Pure, SameOperandsAndResultType]> {
+    let summary = "Compute the dual of a multivector";
+
+    let arguments = (ins Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$src attr-dict `:` type($out)";
+
+    // let hasVerifier = 1;
+}
+
+
+def Cliff_Exp : Cliff_Op<"exp", [Pure, SameOperandsAndResultType]> {
+    let summary = "Compute the exponential of a multivector";
+
+    let arguments = (ins Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$src attr-dict `:` type($out)";
 
     // let hasVerifier = 1;
 }
