@@ -83,8 +83,21 @@ def Cliff_ret : Cliff_Op<"ret", [Pure, HasParent<"FuncOp">, MemRefsNormalizable,
 }
 
 
-def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure, SameOperandsAndResultType]> {
+def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
     let summary = "Compute the geometric product between two multivectors";
+
+    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
+
+    let hasVerifier = 1;
+}
+
+
+def Cliff_Vee : Cliff_Op<"vee", [Pure, SameOperandsAndResultType]> {
+    let summary = "Compute the vee between two multivectors";
 
     let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
     let results = (outs Cliff_MultivctTensor:$out);
@@ -95,3 +108,38 @@ def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure, SameOperandsAndResultType]> {
     // let hasVerifier = 1;
 }
 
+def Cliff_Wedge : Cliff_Op<"wedge", [Pure, SameOperandsAndResultType]> {
+    let summary = "Compute the wedge between two multivectors";
+
+    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($out)";
+
+    // let hasVerifier = 1;
+}
+
+def Cliff_Dot : Cliff_Op<"dot", [Pure, SameOperandsAndResultType]> {
+    let summary = "Compute the dot between two multivectors";
+
+    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($out)";
+
+    // let hasVerifier = 1;
+}
+
+def Cliff_Sandwich : Cliff_Op<"sandwich", [Pure, SameOperandsAndResultType]> {
+    let summary = "Compute the sandwich between two multivectors";
+
+    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($out)";
+
+    // let hasVerifier = 1;
+}
