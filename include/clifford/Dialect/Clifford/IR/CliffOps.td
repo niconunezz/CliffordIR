@@ -178,3 +178,40 @@ def Cliff_Exp : Cliff_Op<"exp", [Pure, SameOperandsAndResultType]> {
 
     // let hasVerifier = 1;
 }
+
+
+def Cliff_Normalize : Cliff_Op<"normalize", [Pure, SameOperandsAndResultType]> {
+    let summary = "Normalize a multivector";
+
+    let arguments = (ins Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$src attr-dict `:` type($out)";
+
+    // let hasVerifier = 1;
+}
+
+//TODO : check result type of sign
+
+def Cliff_Sign : Cliff_Op<"sign", [Pure, SameOperandsAndResultType]> {
+    let summary = "Obtain a multivectors sign";
+
+    let arguments = (ins Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$src attr-dict `:` type($out)";
+
+    // let hasVerifier = 1;
+}
+
+
+def Cliff_Sign : Cliff_Op<"get_idx", [Pure]> {
+    let summary = "Obtain a multivectors i part";
+
+    let arguments = (ins Cliff_MultivctTensor:$src, "unsigned":$idx);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$src `,` $idx attr-dict `:` type($src) `->` type($out)";
+
+    // let hasVerifier = 1;
+}
