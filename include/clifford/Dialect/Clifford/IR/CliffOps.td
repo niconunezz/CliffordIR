@@ -95,6 +95,28 @@ def Cliff_Add : Cliff_Op<"add", [Pure]> {
     let hasVerifier = 1;
 }
 
+def Cliff_Sub : Cliff_Op<"sub", [Pure, ]> {
+    let summary = "Compute the substraction between two multivectors";
+
+    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `+` type($rhs) `->` type($out)";
+
+    let hasVerifier = 1;
+}
+
+def Cliff_Constant : Cliff_Op<"constant", [ConstantLike, Pure, AllTypesMatch<["value", "result"]>]> {
+    let summary = "Define a constant multivector";
+
+    //TODO : make this fp
+    let arguments = (ins AnyIntElementsAttr :$value);
+    let results = (outs Cliff_MultivctTensor:$result);
+
+    let assemblyFormat = "$value attr-dict `:` type($result) ";
+    // let hasVerifier = 1;
+}
+
 
 def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
     let summary = "Compute the geometric product between two multivectors";
@@ -205,13 +227,13 @@ def Cliff_Sign : Cliff_Op<"sign", [Pure, SameOperandsAndResultType]> {
 }
 
 
-def Cliff_Sign : Cliff_Op<"get_idx", [Pure]> {
+def Cliff_Idx : Cliff_Op<"get_idx", [Pure]> {
     let summary = "Obtain a multivectors i part";
 
-    let arguments = (ins Cliff_MultivctTensor:$src, "unsigned":$idx);
+    let arguments = (ins Cliff_MultivctTensor:$src, Cliff_Int:$idx);
     let results = (outs Cliff_MultivctTensor:$out);
 
-    let assemblyFormat = "$src `,` $idx attr-dict `:` type($src) `->` type($out)";
+    let assemblyFormat = "$src `,` $idx attr-dict `:` type($src) `,` type($idx)  `->` type($out)";
 
     // let hasVerifier = 1;
 }

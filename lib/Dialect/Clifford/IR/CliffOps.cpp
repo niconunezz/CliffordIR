@@ -37,3 +37,19 @@ LogicalResult Add::verify() {
 
     return success();
 }
+
+LogicalResult Sub::verify() {
+    auto LhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
+    auto LhsMask = cast<Cliff_MultivectorType>(LhsTy).getMask();
+
+    auto RhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
+    auto RhsMask = cast<Cliff_MultivectorType>(RhsTy).getMask();
+
+    auto OutTy = cast<RankedTensorType>(getOut().getType()).getElementType();
+    auto OutMask = cast<Cliff_MultivectorType>(OutTy).getMask();
+
+    if ((LhsMask | RhsMask) != OutMask) 
+        return emitError("Mask out should be or(maskLHS, maskRHS) but isnt");
+
+    return success();
+}
