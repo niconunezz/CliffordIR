@@ -12,8 +12,8 @@ mlir_tablegen(Dialect.cpp.inc -gen-dialect-defs)
 add_mlir_doc(CliffDialect CliffDialect dialects/ -gen-dialect-doc)
 
 set(LLVM_TARGET_DEFINITIONS CliffTypes.td)
-mlir_tablegen(CliffTypes.h.inc -gen-typedef-decls -dialect=diss)
-mlir_tablegen(CliffTypes.cpp.inc -gen-typedef-defs -dialect=diss)
+mlir_tablegen(CliffTypes.h.inc -gen-typedef-decls -dialect=cliff)
+mlir_tablegen(CliffTypes.cpp.inc -gen-typedef-defs -dialect=cliff)
 
 set(LLVM_TARGET_DEFINITIONS CliffAttrDefs.td)
 mlir_tablegen(CliffAttrDefs.h.inc -gen-attrdef-decls)

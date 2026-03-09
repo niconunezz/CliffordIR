@@ -4,11 +4,14 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
+#include "clifford/Dialect/CliffGPU/IR/Dialect.h"
 
 
 int main(int argc, char **argv) {
     mlir::DialectRegistry registry;
+    registry.insert<mlir::clg::CliffGPUDialect>();
     registry.insert<mlir::cliff::CliffDialect>();
+
 
     registerAllDialects(registry);
 

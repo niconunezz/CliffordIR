@@ -6,6 +6,7 @@ add_llvm_executable(cliff-opt cliff-opt.cpp)
 target_link_libraries(cliff-opt PRIVATE
     ${cliford_libs}
     CliffordIR
+    CliffGPUIR
     ${dialect_libs}
     ${conversion_libs}
     MLIROptLib
