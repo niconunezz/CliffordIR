@@ -15,16 +15,44 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 
-class LinearLayout {
 
-private:
+namespace mlir::clg {
     
+class LinearLayout {
+    
+private:
+        
     llvm::MapVector<StringAttr,
-                    std::vector<std::vector<int32_t>> bases;
-
-    llvm::MapVector<StringAttr, int32_t> out_dims;
+        std::vector<std::vector<int32_t>>> bases;
+    
+    llvm::MapVector<StringAttr, int32_t> outDims;
     int32_t rank=0;
 
-}
+public:
+    using BasesT = decltype(bases);
+    LinearLayout() = default;
 
-#endif CLIFFORD_TOOLS_LINEARLAYOUT_H
+    friend bool operator==(const LinearLayout &lhs, const LinearLayout &rhs);
+    friend llvm::hash_code hash_value(const LinearLayout& arg);
+
+    auto getBases() const { return bases; } 
+    auto getOutDimNames() const { return llvm::make_first_range(outDims);}
+
+    int32_t getOutDimSize(StringAttr Name) const {
+        return 1 << getOutDimSizeLog2(Name);
+    }
+    int32_t getOutDimSizeLog2(StringAttr Name) const;
+
+
+
+    explicit LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames);
+
+
+};
+
+    
+
+} // end namespace mlir::clg
+
+
+#endif //CLIFFORD_TOOLS_LINEARLAYOUT_H
