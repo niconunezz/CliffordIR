@@ -8,6 +8,7 @@ target_link_libraries(cliff-opt PRIVATE
     CliffordIR
     CliffGPUIR
     CliffTools
+    CliffToCliffGPUPass
     ${dialect_libs}
     ${conversion_libs}
     MLIROptLib
