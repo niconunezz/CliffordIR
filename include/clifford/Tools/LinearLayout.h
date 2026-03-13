@@ -49,6 +49,8 @@ public:
     explicit LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames);
 
     static LinearLayout empty() { return {}; }
+    static LinearLayout identity1D(ArrayRef<unsigned> shape);
+
 
 
     friend LinearLayout operator*(LinearLayout inner, LinearLayout outer);
@@ -57,6 +59,7 @@ public:
         *this = *this * outer;
         return *this;
     }
+
 
 };
 
