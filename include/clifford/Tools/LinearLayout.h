@@ -36,6 +36,7 @@ public:
     friend llvm::hash_code hash_value(const LinearLayout& arg);
 
     auto getBases() const { return bases; } 
+    auto getInDimNames() const { return llvm::make_first_range(bases);}
     auto getOutDimNames() const { return llvm::make_first_range(outDims);}
 
     int32_t getOutDimSize(StringAttr Name) const {
