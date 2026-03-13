@@ -29,6 +29,17 @@ bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
     return true;
 } 
 
+LinearLayout identity1D(int32_t N, StringAttr inDimName, StringAttr outDimName) {
+    assert(llvm::isPowerOf2(N) && "N must be a power of 2");
+    std::vector<std::vector<int32_t>> bases;
+
+    for (int i = 0; i < N; i *= 2) {
+        bases.emplace_back(std::vector<int32_t>{i});
+    }
+
+    return LinearLayout({{inDimName, std::move(bases)}}, {{OutDimName, N}});
+}
+
 LinearLayout operator*(LinearLayout inner, LinearLayout outer) {
     // for know we just need the case ll * empty = ll to work
     if (inner.getInDimNames().empty())
