@@ -29,6 +29,16 @@ bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
     return true;
 } 
 
+LinearLayout operator*(LinearLayout inner, LinearLayout outer) {
+    // for know we just need the case ll * empty = ll to work
+    if (inner.getInDimNames().empty())
+        return outer;
+
+    if (outer.getInDimNames().empty())
+        return inner;
+    
+    return inner;
+}
 
 llvm::hash_code hash_value(const LinearLayout& layout) {
     size_t seed = 0;
