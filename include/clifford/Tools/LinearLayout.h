@@ -47,6 +47,15 @@ public:
 
     explicit LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames);
 
+    static LinearLayout empty() { return {}; }
+
+
+    friend LinearLayout operator*(LinearLayout inner, LinearLayout outer);
+
+    LinearLayout &operator*=(LinearLayout outer) {
+        *this = *this * outer;
+        return *this;
+    }
 
 };
 
