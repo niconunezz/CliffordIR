@@ -13,6 +13,23 @@ using namespace mlir;
 using namespace llvm;
 
 
+LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, ArrayRef<int64_t> shape) {
+     
+    unsigned rank = shape.size();
+    SmallVector<unsigned> order(rank);
+
+    assert(rank == 1 && "4now only 1dim tensors");
+    std::iota(order.begin(), order.end(), 0);
+    std::reverse(order.begin(), order.end());
+
+    StringAttr inDim = StringAttr::get(ctx, "lane");
+    StringAttr outDim = StringAttr::get(ctx, "dim0");
+
+    auto ll = LinearLayout::identity1D(shape[0], inDim, outDim);
+    
+    return LinearEncodingAttr::get(ctx, ll);
+    
+}
 
 
 std::optional<LinearLayout> parseLinearLayout(AsmParser& parser, 

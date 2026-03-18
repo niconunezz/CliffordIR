@@ -21,4 +21,14 @@
 #include "clifford/Dialect/CliffGPU/IR/CliffGPUAttrDefs.h.inc"
 
 
+namespace mlir::clg {
+
+
+    LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, ArrayRef<int64_t> shape);
+
+
+} // namespace mlir::clg
+
+
+
 #endif
