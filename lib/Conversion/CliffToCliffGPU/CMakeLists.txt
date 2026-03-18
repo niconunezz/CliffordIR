@@ -1,7 +1,7 @@
 add_clifford_library(CliffToCliffGPUPass
 
     CliffToCliffGPUPass.cpp
-    CliffToCliffGPU.cpp
+    CliffGPUConversion.cpp
     
     DEPENDS
     CliffordConversionPassIncGen
