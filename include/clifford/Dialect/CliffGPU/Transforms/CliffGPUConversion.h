@@ -9,8 +9,8 @@ class CliffGPUTypeConverter : public TypeConverter {
 
 public:
     CliffGPUTypeConverter(MLIRContext *context, int numWarps, int threadsPerWarp);
-    int getNumWarps const { return getNumWarps; }
-    int getThreadsPerWarp const { return getthreadsPerWarpNumWarps; }
+    int getNumWarps() const { return numWarps; }
+    int getThreadsPerWarp() const { return threadsPerWarp; }
 
 private:
     MLIRContext *context;
@@ -23,7 +23,7 @@ class CliffGPUConversionTarget : public ConversionTarget {
 
 public:
     explicit CliffGPUConversionTarget(MLIRContext *ctx, const TypeConverter &typeConverter);
-}
+};
 
 } // namespace mlir
 
