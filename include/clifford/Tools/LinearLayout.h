@@ -12,6 +12,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -44,14 +45,10 @@ public:
     }
     int32_t getOutDimSizeLog2(StringAttr Name) const;
 
-
-
     explicit LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames);
 
     static LinearLayout empty() { return {}; }
-    static LinearLayout identity1D(ArrayRef<unsigned> shape);
-
-
+    static LinearLayout identity1D(unsigned N, StringAttr inDimName, StringAttr outDimName);
 
     friend LinearLayout operator*(LinearLayout inner, LinearLayout outer);
 
