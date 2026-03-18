@@ -2,6 +2,9 @@
 
 namespace mlir::clg {
 
+
+using BasesT = LinearLayout::BasesT;
+
 bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
 
     if (llvm::to_vector(lhs.getOutDimNames()) !=
@@ -29,15 +32,20 @@ bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
     return true;
 } 
 
-LinearLayout identity1D(int32_t N, StringAttr inDimName, StringAttr outDimName) {
-    assert(llvm::isPowerOf2(N) && "N must be a power of 2");
+/*static*/ LinearLayout LinearLayout::identity1D(unsigned N, StringAttr inDimName, StringAttr outDimName) {
+    assert(llvm::isPowerOf2_32(N) && "N must be a power of 2");
+    
     std::vector<std::vector<int32_t>> bases;
 
-    for (int i = 0; i < N; i *= 2) {
+    BasesT ret0;
+    ArrayRef ret1 = {outDimName};
+
+    for (int i = 1; i < N; i *= 2) {
         bases.emplace_back(std::vector<int32_t>{i});
     }
+    ret0[inDimName] = bases;
 
-    return LinearLayout({{inDimName, std::move(bases)}}, {{OutDimName, N}});
+    return LinearLayout(ret0, ret1);
 }
 
 LinearLayout operator*(LinearLayout inner, LinearLayout outer) {
