@@ -32,4 +32,40 @@ CliffGPUTypeConverter::CliffGPUTypeConverter(MLIRContext *ctx, int numWarp,
 
         return tensorType;
     });
+};
+
+
+CliffGPUConversionTarget::CliffGPUConversionTarget(MLIRContext &ctx, const TypeConverter &typeConverter) : ConversionTarget(ctx) {
+
+    addLegalDialect<clg::CliffGPUDialect>();
+    addDynamicallyLegalDialect<cliff::CliffDialect>
+        ([&](Operation *op) {return isDynamicallyLegal(op, typeConverter); });
+
+    addDynamicallyLegalOp<cliff::FuncOp>([&](cliff::FuncOp op) -> bool {
+        for (auto arg : op.getArguments()) {
+            if (auto tensor = dyn_cast<RankedTensorType>(arg.getType())) {
+                if (!tensor.getEncoding()) 
+                    return false;
+            }
+        }
+        return true;
+    });
+
+};
+
+
+bool CliffGPUConversionTarget::isDynamicallyLegal(
+    Operation *op, const TypeConverter &typeConverter) {
+
+    bool hasLegalRegions = true;
+    for (auto &region : op->getRegions()) {
+        hasLegalRegions = hasLegalRegions && typeConverter.isLegal(&region);
+    }
+
+    if (hasLegalRegions && typeConverter.isLegal(op)) {
+        return true;
+    }
+
+    return false;
+
 }

@@ -23,6 +23,8 @@ class CliffGPUConversionTarget : public ConversionTarget {
 
 public:
     explicit CliffGPUConversionTarget(MLIRContext &ctx, const TypeConverter &typeConverter);
+
+    bool isDynamicallyLegal(Operation *op, const TypeConverter &typeConverter);
 };
 
 } // namespace mlir
