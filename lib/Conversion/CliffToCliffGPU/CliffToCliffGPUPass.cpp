@@ -23,27 +23,25 @@ using namespace mlir::cliff;
 using namespace mlir::clg;
 
 
+template <class Op>
+struct GenericOpPattern : public OpConversionPattern<Op> {
+    using OpConversionPattern<Op>::OpConversionPattern;
 
-class ConvertCliffToCliffGPU : public cliff::impl::ConvertCliffToCliffGPUBase<ConvertCliffToCliffGPU> {
-
-public:
-
-using ConvertCliffToCliffGPUBase::ConvertCliffToCliffGPUBase;
-
-
-class CliffReturnPattern : public OpConversionPattern<Return> {
-public:
-    using OpConversionPattern::OpConversionPattern;
-
-    LogicalResult matchAndRewrite(Return op, Return::Adaptor adaptor,
+    LogicalResult matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                                   ConversionPatternRewriter &rewriter) const override {
         
-        rewriter.replaceOpWithNewOp<Return>(op, adaptor.getOperands());
+        SmallVector<Type> retTypes;
+        if (failed(this->getTypeConverter()->convertTypes(op->getResultTypes(), retTypes))) 
+            return failure();
+        
+        rewriter.replaceOpWithNewOp<Op>(op, retTypes, adaptor.getOperands(), op->getAttrs());
+
         return success();
-    } 
+    }
 };
 
-class CliffFuncOpPatter : public OpConversionPattern<FuncOp> {
+
+class CliffFuncOpPattern : public OpConversionPattern<FuncOp> {
 public:
     using OpConversionPattern::OpConversionPattern;
 
@@ -63,15 +61,41 @@ public:
     }
 };
 
+void populateCliffPatterns(CliffGPUTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    MLIRContext *context = patterns.getContext();
+    patterns.insert<
+        GenericOpPattern<Return>,
+        CliffFuncOpPattern
+    >(typeConverter, context);
+
+}
+
+
+class ConvertCliffToCliffGPU : public cliff::impl::ConvertCliffToCliffGPUBase<ConvertCliffToCliffGPU> {
+
+public:
+
+using ConvertCliffToCliffGPUBase::ConvertCliffToCliffGPUBase;
+
+
+
+
 void runOnOperation() override {
     MLIRContext *context = &getContext();
     ModuleOp mod = getOperation();
 
     CliffGPUTypeConverter typeConverter(context, numWarps, threadsPerWarp);
     CliffGPUConversionTarget conversionTarget(*context, typeConverter);
+    RewritePatternSet patterns(context);
+
+    populateCliffPatterns(typeConverter, patterns);
+
+    if (failed(applyPartialConversion(mod, conversionTarget, std::move(patterns)))) 
+        return signalPassFailure();
+    
 }
 
 };
 
 
-}
+} // namespace
