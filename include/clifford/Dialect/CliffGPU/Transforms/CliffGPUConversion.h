@@ -22,7 +22,7 @@ private:
 class CliffGPUConversionTarget : public ConversionTarget {
 
 public:
-    explicit CliffGPUConversionTarget(MLIRContext *ctx, const TypeConverter &typeConverter);
+    explicit CliffGPUConversionTarget(MLIRContext &ctx, const TypeConverter &typeConverter);
 };
 
 } // namespace mlir
