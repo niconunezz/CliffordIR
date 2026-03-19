@@ -10,7 +10,7 @@ def ConvertCliffToCliffGPU : Pass<"convert-cliff-to-cliffGPU", "mlir::ModuleOp">
 
     
     let options = [
-        Option<"numWaps", "num-warps", "int32_t", /*default=*/ "8", "Target machine number of warps">,
+        Option<"numWarps", "num-warps", "int32_t", /*default=*/ "8", "Target machine number of warps">,
         Option<"threadsPerWarp", "threads-per-warp", "int32_t", /*default=*/ "32", "Target machine threads per warp">
     ];
 }
