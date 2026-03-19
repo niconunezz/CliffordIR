@@ -43,6 +43,26 @@ public:
     } 
 };
 
+class CliffFuncOpPatter : public OpConversionPattern<FuncOp> {
+public:
+    using OpConversionPattern::OpConversionPattern;
+
+    LogicalResult matchAndRewrite(FuncOp op, FuncOp::Adaptor adaptor,
+                                  ConversionPatternRewriter &rewriter) const override {
+
+        auto converter = getTypeConverter();
+        TypeConverter::SignatureConversion result(op.getNumArguments());
+        auto newOp = rewriter.replaceOpWithNewOp<FuncOp>(op, op.getName(), op.getFunctionType(), nullptr, nullptr, nullptr);
+        newOp->setAttrs(adaptor.getAttributes());
+        rewriter.inlineRegionBefore(op.getBody(), newOp.getBody(), newOp.getBody().end());
+
+        if (!newOp.getBody().empty())
+            rewriter.applySignatureConversion(&newOp.getBody().front(), result, converter);
+        
+        return success();
+    }
+};
+
 void runOnOperation() override {
     MLIRContext *context = &getContext();
     ModuleOp mod = getOperation();
