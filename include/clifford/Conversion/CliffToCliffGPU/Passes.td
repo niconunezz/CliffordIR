@@ -7,4 +7,10 @@ def ConvertCliffToCliffGPU : Pass<"convert-cliff-to-cliffGPU", "mlir::ModuleOp">
     let dependentDialects = ["mlir::clg::CliffGPUDialect",
                             "mlir::cliff::CliffDialect",
                             "mlir::arith::ArithDialect"];
+
+    
+    let options = [
+        Option<"numWaps", "num-warps", "int32_t", /*default=*/ "8", "Target machine number of warps">,
+        Option<"threadsPerWarp", "threads-per-warp", "int32_t", /*default=*/ "32", "Target machine threads per warp">
+    ];
 }
