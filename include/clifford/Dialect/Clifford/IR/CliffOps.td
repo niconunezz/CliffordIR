@@ -75,7 +75,7 @@ def Cliff_FuncOp : Cliff_Op<"func", [FunctionOpInterface,
   let hasCustomAssemblyFormat = 1;
 }
 
-def Cliff_ret : Cliff_Op<"ret", [Pure, HasParent<"FuncOp">, MemRefsNormalizable, ReturnLike, Terminator]> {
+def Cliff_Return : Cliff_Op<"ret", [Pure, HasParent<"FuncOp">, MemRefsNormalizable, ReturnLike, Terminator]> {
     let summary = "Operation for returning a function";
 
     let arguments = (ins Variadic<AnyType>:$retVal);
