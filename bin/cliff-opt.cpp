@@ -5,6 +5,8 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
 #include "clifford/Dialect/CliffGPU/IR/Dialect.h"
+#include "clifford/Conversion/CliffToCliffGPU/Passes.h"
+
 
 
 int main(int argc, char **argv) {
@@ -14,6 +16,7 @@ int main(int argc, char **argv) {
 
 
     registerAllDialects(registry);
+    mlir::cliff::registerConvertCliffToCliffGPUPass();
 
     return mlir::asMainReturnCode(
         mlir::MlirOptMain(argc, argv, "Clifford optimizer driver\n", registry));

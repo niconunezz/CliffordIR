@@ -12,6 +12,8 @@ using namespace mlir::cliff;
 using namespace mlir;
 using namespace llvm;
 
+namespace mlir::clg {
+
 
 LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, ArrayRef<int64_t> shape) {
      
@@ -159,3 +161,5 @@ void CliffGPUDialect::initialize() {
 
 
 }
+
+} // namespace mlir::clg

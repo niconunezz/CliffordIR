@@ -10,10 +10,11 @@
 
 
 namespace mlir::cliff {
-    #define GEN_PASS_DEF_CONVERTCLIFFTOCLIFFGPU
-    #include "clifford/Conversion/CliffToCliffGPU/Passes.h.inc"
+#define GEN_PASS_DEF_CONVERTCLIFFTOCLIFFGPU
+#include "clifford/Conversion/CliffToCliffGPU/Passes.h.inc"
 
-}
+
+} // namespace mlir::cliff 
 
 
 namespace {
@@ -76,8 +77,6 @@ class ConvertCliffToCliffGPU : public cliff::impl::ConvertCliffToCliffGPUBase<Co
 public:
 
 using ConvertCliffToCliffGPUBase::ConvertCliffToCliffGPUBase;
-
-
 
 
 void runOnOperation() override {

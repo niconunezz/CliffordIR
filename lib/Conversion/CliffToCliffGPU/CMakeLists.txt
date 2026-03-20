@@ -11,4 +11,5 @@ add_clifford_library(CliffToCliffGPUPass
     MLIRArithDialect
     MLIRMathDialect
     MLIRSCFDialect
+    CliffGPUIR
 )
