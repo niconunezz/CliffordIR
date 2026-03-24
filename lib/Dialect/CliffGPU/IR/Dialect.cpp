@@ -14,6 +14,14 @@ using namespace llvm;
 
 namespace mlir::clg {
 
+ArrayRef<StringAttr> getStandardOutDims(unsigned N) {
+    ArrayRef<StringAttr> ret;
+    for (int i = 0; i < N; ++i) {
+        ret.emplace_back(StringAttr::get(ctx, llvm::Twine("dim") + llvm::Twine(i)));
+    }
+    return ret;
+}
+
 
 LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, ArrayRef<int64_t> shape) {
      
