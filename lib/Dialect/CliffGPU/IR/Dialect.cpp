@@ -23,20 +23,31 @@ ArrayRef<StringAttr> getStandardOutDims(unsigned N) {
 }
 
 
-LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, ArrayRef<int64_t> shape) {
+LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int numWarps, int threadsPerWarp, ArrayRef<int64_t> shape) {
      
     unsigned rank = shape.size();
     SmallVector<unsigned> order(rank);
 
-    assert(rank == 1 && "4now only 1dim tensors");
     std::iota(order.begin(), order.end(), 0);
     std::reverse(order.begin(), order.end());
 
-    StringAttr inDim = StringAttr::get(ctx, "lane");
-    StringAttr outDim = StringAttr::get(ctx, "dim0");
+    StringAttr kLane = StringAttr::get(ctx, "lane");
+    StringAttr kWarp = StringAttr::get(ctx, "warp");
 
-    auto ll = LinearLayout::identity1D(shape[0], inDim, outDim);
+    ArrayRef<StringAttr> outDims = getStandardOutDims(rank);
+
+    int totalThreads = numWarps * threadsPerWarp;
+    assert(totalEls == totalThreads && "Number of elements should be equal than available threads");
+    int elsPerThread = totalEls / totalThreads;
     
+    assert(llvm::isPowerOfTwo_64(totalEls) && "Tensor dims must be powers of 2");
+
+    auto ll = LinearLayout::empty();
+
+    for (int i = 0; i < rank; ++i) {
+        ll *= LinearLayout::identity1D(shape[order[i]], kLane, outDims[order[i]]);
+    }
+        
     return LinearEncodingAttr::get(ctx, ll);
     
 }
