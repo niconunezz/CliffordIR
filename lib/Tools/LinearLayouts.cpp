@@ -4,7 +4,7 @@ namespace mlir::clg {
 
 
 using BasesT = LinearLayout::BasesT;
-
+using namespace mlir::cliff;
 
 BasesT makeBasesMap(ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases) {
     BasesT retBases;
