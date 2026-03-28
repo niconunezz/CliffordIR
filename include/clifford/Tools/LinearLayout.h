@@ -38,6 +38,7 @@ public:
 
     auto getBases() const { return bases; } 
     auto getInDimNames() const { return llvm::make_first_range(bases);}
+
     auto getOutDimNames() const { return llvm::make_first_range(outDims);}
 
     int32_t getOutDimSize(StringAttr Name) const {
@@ -45,7 +46,18 @@ public:
     }
     int32_t getOutDimSizeLog2(StringAttr Name) const;
 
+    int32_t getInDimSize(StringAttr Name) const {
+        return 1 << getInDimSizeLog2(Name);
+    }
+
+    int32_t getInDimSizeLog2(StringAttr Name) const;
+
     explicit LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames);
+
+    explicit LinearLayout(
+      ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases,
+      ArrayRef<StringAttr> outDimNames);
+
 
     static LinearLayout empty() { return {}; }
     static LinearLayout identity1D(unsigned N, StringAttr inDimName, StringAttr outDimName);
@@ -56,7 +68,6 @@ public:
         *this = *this * outer;
         return *this;
     }
-
 
 };
 

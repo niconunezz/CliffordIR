@@ -142,6 +142,11 @@ llvm::hash_code hash_value(const LinearLayout& layout) {
     return seed;
 }
 
+int32_t LinearLayout::getInDimSizeLog2(StringAttr Name) const {
+    auto it = bases.find(Name);
+    assert(it != bases.end() && "Dim not found!");
+    return llvm::Log2_32(it->second.size());
+};
 
 int32_t LinearLayout::getOutDimSizeLog2(StringAttr Name) const {
     auto it = outDims.find(Name);
