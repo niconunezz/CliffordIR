@@ -122,14 +122,77 @@ SmallVector<StringAttr> getSupremum(const SmallVector<StringAttr> &a, const Smal
 }
 
 LinearLayout operator*(LinearLayout inner, LinearLayout outer) {
-    // for know we just need the case ll * empty = ll to work
-    if (inner.getInDimNames().empty())
-        return outer;
+    auto innerInDim = llvm::to_vector((inner.getInDimNames()));
+    auto innerOutDim = llvm::to_vector((inner.getOutDimNames()));
+    auto outerInDim = llvm::to_vector((outer.getInDimNames()));
+    auto outerOutDim = llvm::to_vector((outer.getOutDimNames()));
 
-    if (outer.getInDimNames().empty())
-        return inner;
+    SmallVector<StringAttr> retInDims = getSupremum(innerInDim,
+                                                    outerInDim);
+
+    SmallVector<StringAttr> retOutDims = getSupremum(innerOutDim,
+                                                     outerOutDim);
+
+    // int retInDimsSize = retInDims.size();
+    int retOutDimsSize = retOutDims.size();
+
+    BasesT innerBases = inner.getBases();
+    BasesT outerBases = outer.getBases();
+    BasesT retBases;
     
-    return inner;
+    for (const StringAttr &inDimName : retInDims) {
+        
+        bool isDimInInner = innerBases.contains(inDimName);
+        bool isDimInOuter = outerBases.contains(inDimName);
+        
+        int innerNumBases = isDimInInner ? innerBases[inDimName].size() : 0;
+        int outerNumBases = isDimInOuter ? outerBases[inDimName].size() : 0;
+        int numBases = innerNumBases + outerNumBases;
+
+        int basisIdx = 0;
+        std::vector<std::vector<int>> retBasis(numBases, std::vector<int>(retOutDimsSize, 0));
+
+        if (isDimInInner) {
+            std::vector<std::vector<int>> innerDimBases = innerBases[inDimName];
+    
+            for (const auto &innerBasis : innerDimBases) {
+
+                for (const auto [idx, elem] : llvm::enumerate(innerBasis)) {
+                    retBasis[basisIdx][idx] = elem;
+                }
+                basisIdx++;
+            }
+        }
+
+        if (isDimInOuter) {
+            
+            std::vector<std::vector<int>> outerDimBases = outerBases[inDimName];
+
+            int outerOutNumDims = llvm::to_vector(outer.getOutDimNames()).size();
+            int idxOffset = retOutDimsSize - outerOutNumDims;
+
+            for (auto const &outerBasis : outerDimBases) {
+                for (auto [idx, elem] : llvm::enumerate(outerBasis)) {
+                    
+                    int realIdx = idxOffset + idx;
+                    // if idxOffset+1 <= innerOutDimsSize -> outDim overlaps
+                    // k = (innerOutDimsSize - idxOffset) dims which are the
+                    // last k innerOutDims dimensions.
+                    int k = innerOutDim.size() - idxOffset;
+
+                    int shift = idx < k ? inner.getOutDimSizeLog2(outerOutDim[idx]) : 0;
+                
+                    retBasis[basisIdx][realIdx] = elem << shift;
+
+                }
+                basisIdx++;
+            }
+        }
+
+        retBases[inDimName] = retBasis;
+    }
+
+    return LinearLayout(retBases, retOutDims);
 }
 
 llvm::hash_code hash_value(const LinearLayout& layout) {
