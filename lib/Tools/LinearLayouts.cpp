@@ -227,11 +227,51 @@ int32_t LinearLayout::getOutDimSizeLog2(StringAttr Name) const {
     return llvm::Log2_32(it->second);
 };
 
+std::string LinearLayout::toString() const {
+  // Start with a newline because we print out a bulleted list; it doesn't
+  // make sense for the first line of this list to be on the same line as
+  // any previous text.
+  std::string ret = "\n";
+  std::string outDimsStr =
+      "[" +
+      join(outDims, ", ",
+           [](auto dimAndSize) {
+             auto [outDim, size] = dimAndSize;
+             return outDim.str() + " (size " + std::to_string(size) + ")";
+           }) +
+      "]";
+
+  if (bases.empty()) {
+    if (outDims.empty()) {
+      return "\n(empty layout)";
+    } else {
+      return "\n(empty layout with out-dims " + outDimsStr + ")";
+    }
+  }
+
+  // TODO: Add spaces for alignment.
+  for (const auto &[inDim, inDimBases] : bases) {
+    if (inDimBases.empty()) {
+      ret += " - " + inDim.str() + " is a size 1 dimension\n";
+      continue;
+    }
+
+    ret += " - " +
+           join(llvm::seq(inDimBases.size()), "\n   ",
+                [&, &inDim = inDim, &inDimBases = inDimBases](int i) {
+                  return inDim.str() + "=" + std::to_string(1 << i) + " -> (" +
+                         join(inDimBases[i], ", ") + ")";
+                }) +
+           "\n";
+  }
+  ret += "where out dims are: " + outDimsStr;
+  return ret;
+}
 
 LinearLayout::LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames)
  : bases(std::move(bases)) {
 
-    for (const auto& outDim : outDimNames) {
+    for (StringAttr outDim : outDimNames) {
         outDims[outDim] = 1;
     }
 

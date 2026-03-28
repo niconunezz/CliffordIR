@@ -1,3 +1,6 @@
+#ifndef INCLUDE_CLIFFORD_TOOLS_STRUTILS_H
+#define INCLUDE_CLIFFORD_TOOLS_STRUTILS_H
+
 #include <string>
 #include <type_traits>
 
@@ -45,3 +48,6 @@ std::string join(C &&container, llvm::StringRef sep, Fn &&fn) {
 }
 
 } // namespace mlir::cliff
+
+
+#endif // INCLUDE_CLIFFORD_TOOLS_STRUTILS_H

@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+
+#include "clifford/Tools/StrUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/ValueRange.h"
 #include "llvm/ADT/Hashing.h"
@@ -50,6 +52,8 @@ public:
         return 1 << getInDimSizeLog2(Name);
     }
 
+
+
     int32_t getInDimSizeLog2(StringAttr Name) const;
 
     explicit LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames);
@@ -58,6 +62,7 @@ public:
       ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases,
       ArrayRef<StringAttr> outDimNames);
 
+    std::string toString() const;
 
     static LinearLayout empty() { return {}; }
     static LinearLayout identity1D(unsigned N, StringAttr inDimName, StringAttr outDimName);
@@ -70,6 +75,18 @@ public:
     }
 
 };
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const LinearLayout &layout) {
+  os << layout.toString();
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                     const LinearLayout &layout) {
+  os << layout.toString();
+  return os;
+}
 
     
 
