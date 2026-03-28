@@ -14,8 +14,8 @@ using namespace llvm;
 
 namespace mlir::clg {
 
-ArrayRef<StringAttr> getStandardOutDims(unsigned N) {
-    ArrayRef<StringAttr> ret;
+SmallVector<StringAttr> getStandardOutDims(MLIRContext *ctx, unsigned N) {
+    SmallVector<StringAttr> ret;
     for (int i = 0; i < N; ++i) {
         ret.emplace_back(StringAttr::get(ctx, llvm::Twine("dim") + llvm::Twine(i)));
     }
