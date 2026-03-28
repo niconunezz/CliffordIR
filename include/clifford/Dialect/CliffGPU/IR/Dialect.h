@@ -24,7 +24,7 @@
 namespace mlir::clg {
 
 
-    LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, ArrayRef<int64_t> shape);
+    LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int numWarps, int threadsPerWarp, ArrayRef<int64_t> shape);
 
 
 } // namespace mlir::clg

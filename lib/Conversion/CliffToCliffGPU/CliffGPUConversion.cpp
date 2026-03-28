@@ -26,7 +26,7 @@ CliffGPUTypeConverter::CliffGPUTypeConverter(MLIRContext *ctx, int numWarp,
         }
 
         auto shape = tensorType.getShape();
-        LinearEncodingAttr encoding = getDefaultGlobalEncoding(this->context, shape);
+        LinearEncodingAttr encoding = getDefaultGlobalEncoding(this->context, this->numWarps, this->threadsPerWarp ,shape);
 
         tensorType.cloneWithEncoding(encoding);
 
