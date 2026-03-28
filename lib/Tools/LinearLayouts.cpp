@@ -47,15 +47,11 @@ bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
     
     std::vector<std::vector<int32_t>> bases;
 
-    BasesT ret0;
-    ArrayRef ret1 = {outDimName};
-
-    for (int i = 1; i < N; i *= 2) {
+    for (int32_t i = 1; i < N; i *= 2) {
         bases.emplace_back(std::vector<int32_t>{i});
     }
-    ret0[inDimName] = bases;
 
-    return LinearLayout(ret0, ret1);
+    return LinearLayout({{inDimName, std::move(bases)}}, {outDimName});
 }
 
 SmallVector<StringAttr> getSupremum(const SmallVector<StringAttr> &a, const SmallVector<StringAttr> &b) {

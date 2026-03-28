@@ -35,6 +35,30 @@ TEST_F(LinearLayoutTest, Empty) {
 }
 
 
+TEST_F(LinearLayoutTest, Identity1D) {
+  LinearLayout layout =
+      LinearLayout::identity1D(32, S("testIns"), S("testOuts")); 
+  SmallVector<StringAttr> outDims = {S("testOuts")};
+  LinearLayout layout2 = LinearLayout({{S("testIns"), {{1}, {2}, {4}, {8}, {16}}}}, outDims);
+
+  EXPECT_THAT(layout, layout2);
+  EXPECT_THAT(to_vector(layout.getInDimNames()), ElementsAre(S("testIns")));
+  EXPECT_THAT(to_vector(layout.getOutDimNames()), ElementsAre(S("testOuts")));
+  EXPECT_THAT(layout.getInDimSizeLog2(S("testIns")), 5);
+  EXPECT_THAT(layout.getOutDimSizeLog2(S("testOuts")), 5);
+}
+
+TEST_F(LinearLayoutTest, Identity1DSize1) {
+  LinearLayout layout =
+      LinearLayout::identity1D(1, S("testIns"), S("testOuts"));
+  EXPECT_EQ(layout, LinearLayout({{S("testIns"), {}}}, {S("testOuts")}));
+  EXPECT_THAT(to_vector(layout.getInDimNames()), ElementsAre(S("testIns")));
+  EXPECT_THAT(to_vector(layout.getOutDimNames()), ElementsAre(S("testOuts")));
+  EXPECT_THAT(layout.getInDimSizeLog2(S("testIns")), 0);
+  EXPECT_THAT(layout.getOutDimSizeLog2(S("testOuts")), 0);
+}
+
+
 
 
 
