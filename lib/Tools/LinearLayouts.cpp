@@ -5,6 +5,16 @@ namespace mlir::clg {
 
 using BasesT = LinearLayout::BasesT;
 
+
+BasesT makeBasesMap(ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases) {
+    BasesT retBases;
+    for (auto const &[inDim, inDimBases] : bases) {
+        retBases[inDim] = inDimBases;
+    }
+    return retBases;
+}
+
+
 bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
 
     if (llvm::to_vector(lhs.getOutDimNames()) !=
@@ -170,7 +180,12 @@ LinearLayout::LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames)
             }
         }
     }
-    
+}
+
+LinearLayout::LinearLayout(
+      ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases,
+      ArrayRef<StringAttr> outDimNames) : LinearLayout(makeBasesMap(bases), outDimNames) {
+
 }
 
 
