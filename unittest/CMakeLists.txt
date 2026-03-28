@@ -1,0 +1,2 @@
+add_custom_target(CliffordUnitTests)
+add_subdirectory(Tools)

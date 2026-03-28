@@ -10,7 +10,7 @@ set(MLIR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm-project/build/lib/cmake/mlir")
 
 find_package(MLIR REQUIRED CONFIG PATHS ${MLIR_DIR})
 
-
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
 
 
@@ -65,3 +65,5 @@ include_directories(${PROJECT_BINARY_DIR}/third_party) # Tablegen'd files
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(bin)
+add_subdirectory(unittest)
+
