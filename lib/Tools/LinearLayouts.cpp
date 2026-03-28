@@ -62,13 +62,13 @@ SmallVector<StringAttr> getSupremum(const SmallVector<StringAttr> &a, const Smal
     for (auto i=0; i < a.size(); i++) {
         for (auto j=0; j < b.size(); j++) {
             lcs[(i + 1)*stride + j + 1] =
-                (a[i] == b[j]) ? lcs[i*stride + j] + 1 : max(lcs[(i+1)*stride + j], lcs[i*stride + j+1]);
+                (a[i] == b[j]) ? lcs[i*stride + j] + 1 : std::max(lcs[(i+1)*stride + j], lcs[i*stride + j+1]);
         }
     }
         
     const int16_t lcs_size = lcs[a.size()*stride + b.size()];
     // backtracing
-    std::vector<pair<int16_t, int16_t>> anchorPositions(lcs_size);
+    std::vector<std::pair<int16_t, int16_t>> anchorPositions(lcs_size);
     int16_t position = lcs_size;
     while ((m > 0) && (n > 0)) {
         if (a[m-1] == b[n-1]) {
