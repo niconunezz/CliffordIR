@@ -19,5 +19,5 @@ def LinearEncodingAttr : CliffGPU_Attr<"LinearEncoding", "linear_encoding", []> 
     let parameters = (ins LinearLayoutParam:$linearLayout);
 
     let hasCustomAssemblyFormat = 1;
-    let genVerifyDecl = 1;
+    // let genVerifyDecl = 1;
 }
