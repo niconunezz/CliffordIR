@@ -59,6 +59,16 @@ TEST_F(LinearLayoutTest, Identity1DSize1) {
 }
 
 
+TEST_F(LinearLayoutTest, MultiplyIdentity) {
+  LinearLayout prod = LinearLayout::identity1D(16, S("in"), S("out")) *
+                      LinearLayout::identity1D(32, S("in"), S("out"));
+  EXPECT_EQ(prod, LinearLayout(
+                      {{S("in"),
+                        {{1}, {2}, {4}, {8}, {16}, {32}, {64}, {128}, {256}}}},
+                      {S("out")}));
+  EXPECT_THAT(to_vector(prod.getInDimNames()), ElementsAre(S("in")));
+  EXPECT_THAT(to_vector(prod.getOutDimNames()), ElementsAre(S("out")));
+}
 
 
 

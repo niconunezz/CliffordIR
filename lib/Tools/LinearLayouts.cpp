@@ -99,6 +99,7 @@ SmallVector<StringAttr> getSupremum(const SmallVector<StringAttr> &a, const Smal
             currIdxB++;
         }
         ret.push_back(a[idxA]);
+        currIdxA++; currIdxB++;
     }
 
     while (currIdxA != a.size()) {
