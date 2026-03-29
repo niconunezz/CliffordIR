@@ -23,33 +23,58 @@ SmallVector<StringAttr> getStandardOutDims(MLIRContext *ctx, unsigned N) {
 }
 
 
-LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int numWarps, int threadsPerWarp, ArrayRef<int64_t> shape) {
+LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int32_t numWarps, int32_t threadsPerWarp, ArrayRef<int64_t> shape) {
      
     unsigned rank = shape.size();
     SmallVector<unsigned> order(rank);
-
     std::iota(order.begin(), order.end(), 0);
     std::reverse(order.begin(), order.end());
 
     StringAttr kLane = StringAttr::get(ctx, "lane");
     StringAttr kWarp = StringAttr::get(ctx, "warp");
+    StringAttr kBlock = StringAttr::get(ctx, "block");
 
-    ArrayRef<StringAttr> outDims = getStandardOutDims(rank);
-
-    int totalThreads = numWarps * threadsPerWarp;
-    assert(totalEls == totalThreads && "Number of elements should be equal than available threads");
-    int elsPerThread = totalEls / totalThreads;
+    ArrayRef<StringAttr> outDims = getStandardOutDims(ctx, rank);
     
-    assert(llvm::isPowerOfTwo_64(totalEls) && "Tensor dims must be powers of 2");
-
     auto ll = LinearLayout::empty();
+    unsigned remainingLanes = threadsPerWarp;
+    unsigned remainingThreads = numWarps * threadsPerWarp;
+    unsigned remainingWarps = numWarps;
 
-    for (int i = 0; i < rank; ++i) {
-        ll *= LinearLayout::identity1D(shape[order[i]], kLane, outDims[order[i]]);
+    unsigned prevLanes = 1;
+    unsigned prevWarps = 1;
+    int dimThreadsPerWarp;
+    int warpsPerCTA;
+    int blocksPerTensor;
+
+    for (int d = 0; d < rank - 1; ++d) {
+        int i = order[d];
+        unsigned threadsPerCTA = std::clamp<unsigned>(remainingThreads, 1, std::max<unsigned>(1, shape[i]));
+
+        dimThreadsPerWarp = std::clamp<unsigned>(threadsPerCTA, 1, remainingLanes);
+        ll *= LinearLayout::identity1D(dimThreadsPerWarp, kLane, outDims[i]);
+
+        warpsPerCTA = std::clamp<unsigned>(threadsPerCTA / dimThreadsPerWarp, 1, remainingWarps);
+        ll *=  LinearLayout::identity1D(warpsPerCTA, kWarp, outDims[i]);
+
+        blocksPerTensor = shape[i] / warpsPerCTA;
+        ll *= LinearLayout::identity1D(blocksPerTensor, kBlock, outDims[i]);
+
+        remainingWarps /= warpsPerCTA;
+        remainingLanes /= dimThreadsPerWarp;
+        remainingThreads /= threadsPerCTA;
+        prevLanes *= dimThreadsPerWarp;
+        prevWarps *= warpsPerCTA;
     }
-        
-    return LinearEncodingAttr::get(ctx, ll);
+
     
+    dimThreadsPerWarp = threadsPerWarp / prevLanes;
+    ll *= LinearLayout::identity1D(dimThreadsPerWarp, kLane, outDims[order[rank-1]]);
+    warpsPerCTA = numWarps / prevWarps;
+    ll *= LinearLayout::identity1D(warpsPerCTA, kWarp, outDims[order[rank-1]]);
+    blocksPerTensor = shape[order[rank-1]] / warpsPerCTA;
+
+    return LinearEncodingAttr::get(ctx, ll);
 }
 
 
