@@ -70,7 +70,43 @@ TEST_F(LinearLayoutTest, MultiplyIdentity) {
   EXPECT_THAT(to_vector(prod.getOutDimNames()), ElementsAre(S("out")));
 }
 
+TEST_F(LinearLayoutTest, MultiplyDisjoint) {
+  LinearLayout prod = LinearLayout::identity1D(32, S("in1"), S("out1")) *
+                      LinearLayout::identity1D(16, S("in2"), S("out2"));
+  EXPECT_EQ(prod, LinearLayout(
+                      {
+                          {S("in1"), {{1, 0}, {2, 0}, {4, 0}, {8, 0}, {16, 0}}},
+                          {S("in2"), {{0, 1}, {0, 2}, {0, 4}, {0, 8}}},
+                      },
+                      {S("out1"), S("out2")}));
+  EXPECT_THAT(to_vector(prod.getInDimNames()), ElementsAre(S("in1"), S("in2")));
+  EXPECT_THAT(to_vector(prod.getOutDimNames()),
+              ElementsAre(S("out1"), S("out2")));
+}
 
+TEST_F(LinearLayoutTest, MultiplyOverlapping) {
+  LinearLayout prod = LinearLayout::identity1D(4, S("in"), S("out1")) *
+                      LinearLayout::identity1D(8, S("in"), S("out2"));
+  EXPECT_EQ(prod,
+            LinearLayout({{S("in"), {{1, 0}, {2, 0}, {0, 1}, {0, 2}, {0, 4}}}},
+                         {S("out1"), S("out2")}));
+}
+
+TEST_F(LinearLayoutTest, TimesEquals) {
+  LinearLayout prod = LinearLayout::empty();
+  prod *= LinearLayout::identity1D(32, S("in"), S("out"));
+  EXPECT_EQ(prod, LinearLayout::identity1D(32, S("in"), S("out")));
+}
+
+TEST_F(LinearLayoutTest, GetOutDimSizeLog2) {
+  LinearLayout layout(
+      {
+          {S("in0"), {{0}, {0}, {0}}},
+          {S("in1"), {{1}, {2}}},
+      },
+      {S("dim0")});
+  EXPECT_EQ(layout.getOutDimSizeLog2(S("dim0")), 2);
+}
 
 
 } // namespace
