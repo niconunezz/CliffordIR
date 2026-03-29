@@ -15,7 +15,7 @@ using namespace mlir;
 using namespace mlir::clg;
 
 
-CliffGPUTypeConverter::CliffGPUTypeConverter(MLIRContext *ctx, int numWarp,
+CliffGPUTypeConverter::CliffGPUTypeConverter(MLIRContext *ctx, int numWarps,
      int threadsPerWarp) : context(ctx), numWarps(numWarps), threadsPerWarp(threadsPerWarp) {
     
     
