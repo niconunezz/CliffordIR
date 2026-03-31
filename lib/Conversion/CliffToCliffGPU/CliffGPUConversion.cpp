@@ -18,19 +18,18 @@ using namespace mlir::clg;
 CliffGPUTypeConverter::CliffGPUTypeConverter(MLIRContext *ctx, int numWarps,
      int threadsPerWarp) : context(ctx), numWarps(numWarps), threadsPerWarp(threadsPerWarp) {
     
-    
     addConversion([](Type type) { return type; });
     addConversion([this](RankedTensorType tensorType) {
-        if (tensorType.getEncoding()) {
+
+        if (tensorType.getEncoding()) 
             return tensorType;
-        }
+        
+        ArrayRef<int64_t> shape = tensorType.getShape();
 
-        auto shape = tensorType.getShape();
-        LinearEncodingAttr encoding = getDefaultGlobalEncoding(this->context, this->numWarps, this->threadsPerWarp ,shape);
+        LinearEncodingAttr encoding = getDefaultGlobalEncoding(this->context, this->numWarps, this->threadsPerWarp, shape);
+        
+        return tensorType.cloneWithEncoding(encoding);
 
-        tensorType.cloneWithEncoding(encoding);
-
-        return tensorType;
     });
 };
 
