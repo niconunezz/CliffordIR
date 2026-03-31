@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_DEPS ON)
 
+add_link_options(-fuse-ld=mold)
 set(MLIR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm-project/build/lib/cmake/mlir")
 
 find_package(MLIR REQUIRED CONFIG PATHS ${MLIR_DIR})
