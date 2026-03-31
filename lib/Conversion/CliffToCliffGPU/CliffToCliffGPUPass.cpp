@@ -41,23 +41,52 @@ struct GenericOpPattern : public OpConversionPattern<Op> {
     }
 };
 
+static void addNamedAttrs(Operation *op, DictionaryAttr dictAttrs) {
+  for (const NamedAttribute attr : dictAttrs.getValue())
+    if (!op->hasAttr(attr.getName()))
+      op->setAttr(attr.getName(), attr.getValue());
+}
 
 class CliffFuncOpPattern : public OpConversionPattern<FuncOp> {
 public:
     using OpConversionPattern::OpConversionPattern;
 
     LogicalResult matchAndRewrite(FuncOp op, FuncOp::Adaptor adaptor,
-                                  ConversionPatternRewriter &rewriter) const override {
-
+                                ConversionPatternRewriter &rewriter) const override {
         auto converter = getTypeConverter();
-        TypeConverter::SignatureConversion result(op.getNumArguments());
-        auto newOp = rewriter.replaceOpWithNewOp<FuncOp>(op, op.getName(), op.getFunctionType(), nullptr, nullptr, nullptr);
-        newOp->setAttrs(adaptor.getAttributes());
-        rewriter.inlineRegionBefore(op.getBody(), newOp.getBody(), newOp.getBody().end());
 
-        if (!newOp.getBody().empty())
-            rewriter.applySignatureConversion(&newOp.getBody().front(), result, converter);
-        
+        TypeConverter::SignatureConversion sigConversion(op.getNumArguments());
+        SmallVector<Type> newResultTypes;
+
+        for (unsigned i = 0; i < op.getNumArguments(); ++i) {
+            SmallVector<Type> converted;
+            if (failed(converter->convertType(op.getArgument(i).getType(), converted)))
+                return failure();
+            sigConversion.addInputs(i, converted);
+        }
+
+        if (failed(converter->convertTypes(op.getFunctionType().getResults(), newResultTypes)))
+            return failure();
+
+        SmallVector<Type> newArgTypes;
+        for (auto &input : sigConversion.getConvertedTypes())
+            newArgTypes.push_back(input);
+
+        auto newFuncType = FunctionType::get(getContext(), newArgTypes, newResultTypes);
+
+        // Crear la nueva FuncOp SIN mover la región todavía
+       auto newFunc = FuncOp::create(rewriter, op.getLoc(), op.getName(), newFuncType, 
+                               /*sym_visibility=*/nullptr, 
+                               /*arg_attrs=*/nullptr, 
+                               /*res_attrs=*/nullptr);
+        addNamedAttrs(newFunc, adaptor.getAttributes());
+
+        rewriter.inlineRegionBefore(op.getBody(), newFunc.getBody(), newFunc.getBody().end());
+
+        if (failed(rewriter.convertRegionTypes(&newFunc.getBody(), *converter, &sigConversion)))
+            return failure();
+
+        rewriter.replaceOp(op, newFunc);
         return success();
     }
 };
@@ -65,8 +94,11 @@ public:
 void populateCliffPatterns(CliffGPUTypeConverter &typeConverter, RewritePatternSet &patterns) {
     MLIRContext *context = patterns.getContext();
     patterns.insert<
-        GenericOpPattern<Return>,
-        CliffFuncOpPattern
+        CliffFuncOpPattern,
+        GenericOpPattern<ReturnOp>,
+        GenericOpPattern<GeoProd>,
+        GenericOpPattern<Exp>,
+        GenericOpPattern<Sandwich>
     >(typeConverter, context);
 
 }
@@ -82,7 +114,6 @@ using ConvertCliffToCliffGPUBase::ConvertCliffToCliffGPUBase;
 void runOnOperation() override {
     MLIRContext *context = &getContext();
     ModuleOp mod = getOperation();
-
     CliffGPUTypeConverter typeConverter(context, numWarps, threadsPerWarp);
     CliffGPUConversionTarget conversionTarget(*context, typeConverter);
     RewritePatternSet patterns(context);
