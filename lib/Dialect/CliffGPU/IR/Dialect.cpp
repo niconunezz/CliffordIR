@@ -73,6 +73,7 @@ LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int32_t numWarps, 
     warpsPerCTA = numWarps / prevWarps;
     ll *= LinearLayout::identity1D(warpsPerCTA, kWarp, outDims[order[rank-1]]);
     blocksPerTensor = shape[order[rank-1]] / warpsPerCTA;
+    ll *= LinearLayout::identity1D(blocksPerTensor, kBlock, outDims[order[rank-1]]);
 
     return LinearEncodingAttr::get(ctx, ll);
 }
