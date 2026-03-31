@@ -201,6 +201,19 @@ LogicalResult LinearEncodingAttr::verify(::llvm::function_ref<::mlir::InFlightDi
 }
 
 
+struct CliffGPUOpAsmDialectInterface : public OpAsmDialectInterface {
+    using OpAsmDialectInterface::OpAsmDialectInterface;
+
+    AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
+        if (isa<LinearEncodingAttr>(attr)) {
+            os << "layout";
+            return AliasResult::FinalAlias;
+        }
+        return AliasResult::NoAlias;
+    }
+};
+
+} // namespace mlir::clg
 
 void CliffGPUDialect::initialize() {
 
@@ -211,10 +224,8 @@ void CliffGPUDialect::initialize() {
         
     >();
 
-
+    addInterfaces<CliffGPUOpAsmDialectInterface>();
 
 }
 
 
-
-} // namespace mlir::clg
