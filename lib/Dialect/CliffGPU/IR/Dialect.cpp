@@ -24,7 +24,8 @@ SmallVector<StringAttr> getStandardOutDims(MLIRContext *ctx, unsigned N) {
 
 
 LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int32_t numWarps, int32_t threadsPerWarp, ArrayRef<int64_t> shape) {
-     
+
+
     unsigned rank = shape.size();
     SmallVector<unsigned> order(rank);
     std::iota(order.begin(), order.end(), 0);
@@ -194,6 +195,13 @@ void LinearEncodingAttr::print(AsmPrinter& printer) const {
 }
 
 
+LogicalResult LinearEncodingAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, LinearLayout linearLayout) {
+    //todo : fill;
+    return success();
+}
+
+
+
 void CliffGPUDialect::initialize() {
 
 
@@ -206,5 +214,7 @@ void CliffGPUDialect::initialize() {
 
 
 }
+
+
 
 } // namespace mlir::clg
