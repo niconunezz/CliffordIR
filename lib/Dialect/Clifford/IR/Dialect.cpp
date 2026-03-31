@@ -9,6 +9,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 
+#include "mlir/IR/OpImplementation.h"
 
 #include "clifford/Dialect/Clifford/IR/Dialect.cpp.inc"
 
@@ -101,6 +102,20 @@ LogicalResult CliffordAlgebraAttr::verify(::llvm::function_ref<::mlir::InFlightD
 }
 
 
+
+struct CliffOpAsmDialectInterface : public OpAsmDialectInterface {
+    using OpAsmDialectInterface::OpAsmDialectInterface;
+
+    AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
+        if (isa<CliffordAlgebraAttr>(attr)) {
+            os << "space";
+            return AliasResult::FinalAlias;
+        }
+        return AliasResult::NoAlias;
+    }
+};
+
+
 } // end namespace mlir::cliff
 
 
@@ -119,5 +134,7 @@ void CliffDialect::initialize() {
     #define GET_ATTRDEF_LIST
     #include "clifford/Dialect/Clifford/IR/CliffAttrDefs.cpp.inc"
         >();
+
+        addInterfaces<CliffOpAsmDialectInterface>();
 
 }
