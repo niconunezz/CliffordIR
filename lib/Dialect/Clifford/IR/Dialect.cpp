@@ -92,7 +92,7 @@ Attribute CliffordAlgebraAttr::parse(AsmParser &parser, Type type) {
 };
 
 void CliffordAlgebraAttr::print(::mlir::AsmPrinter &printer) const {
-   printer << "<{p : " << getP() << ", q:" << getQ() << ", r:" << getR() << "}>"; 
+   printer << "<{p = " << getP() << ", q =" << getQ() << ", r = " << getR() << "}>"; 
 }
 
 

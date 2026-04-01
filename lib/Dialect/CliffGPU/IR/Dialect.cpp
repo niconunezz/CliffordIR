@@ -31,13 +31,14 @@ LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int32_t numWarps, 
     std::iota(order.begin(), order.end(), 0);
     std::reverse(order.begin(), order.end());
 
+    StringAttr kReg = StringAttr::get(ctx, "register");
     StringAttr kLane = StringAttr::get(ctx, "lane");
     StringAttr kWarp = StringAttr::get(ctx, "warp");
     StringAttr kBlock = StringAttr::get(ctx, "block");
 
     ArrayRef<StringAttr> outDims = getStandardOutDims(ctx, rank);
     
-    auto ll = LinearLayout::empty();
+    auto ll = LinearLayout::zeros1D(2, kReg, outDims[0]); // we ensure theres always a reg dimension
     unsigned remainingLanes = threadsPerWarp;
     unsigned remainingThreads = numWarps * threadsPerWarp;
     unsigned remainingWarps = numWarps;
