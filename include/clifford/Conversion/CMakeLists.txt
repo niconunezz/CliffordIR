@@ -1,1 +1,2 @@
 add_subdirectory(CliffToCliffGPU)
+add_subdirectory(CliffGPUToLLVM)
