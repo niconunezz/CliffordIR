@@ -46,9 +46,18 @@ bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
     assert(llvm::isPowerOf2_32(N) && "N must be a power of 2");
     
     std::vector<std::vector<int32_t>> bases;
-
     for (int32_t i = 1; i < N; i *= 2) {
         bases.emplace_back(std::vector<int32_t>{i});
+    }
+
+    return LinearLayout({{inDimName, std::move(bases)}}, {outDimName});
+}
+
+/*static*/ LinearLayout LinearLayout::zeros1D(unsigned N, StringAttr inDimName, StringAttr outDimName) {
+    assert(llvm::isPowerOf2_32(N) && "N must be a power of 2");
+    std::vector<std::vector<int32_t>> bases;
+    for (int32_t i = 1; i < N; i *= 2) {
+        bases.emplace_back(std::vector<int32_t>{0});
     }
 
     return LinearLayout({{inDimName, std::move(bases)}}, {outDimName});
