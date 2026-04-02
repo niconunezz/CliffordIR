@@ -66,6 +66,7 @@ public:
 
     static LinearLayout empty() { return {}; }
     static LinearLayout identity1D(unsigned N, StringAttr inDimName, StringAttr outDimName);
+    static LinearLayout zeros1D(unsigned N, StringAttr inDimName, StringAttr outDimName);
 
     friend LinearLayout operator*(LinearLayout inner, LinearLayout outer);
 
