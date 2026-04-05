@@ -21,6 +21,15 @@
 #include "clifford/Dialect/Clifford/IR/CliffOps.h.inc"
 
 
+namespace mlir {
+namespace cliff {
+
+    int reorderSign(uint64_t a, uint64_t b);
+    int metricSign(uint64_t a, uint64_t b, int p, int q, int r);
+
+} // end namespace cliff 
+} // end namespace mlir 
+
 
 
 #endif

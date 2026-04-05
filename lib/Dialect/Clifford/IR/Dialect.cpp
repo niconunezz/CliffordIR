@@ -116,6 +116,33 @@ struct CliffOpAsmDialectInterface : public OpAsmDialectInterface {
 };
 
 
+    int reorderSign(uint64_t a, uint64_t b) {
+        int sum = 0;
+        a >>= 1;
+        while (a) {
+            sum += __builtin_popcountll(a & b);
+            a >>= 1;
+        }
+        return (sum & 1) ? -1 : 1;
+    }
+
+    int metricSign(uint64_t a, uint64_t b, int p, int q, int r) {
+        uint64_t sharedBits = a & b;
+        int sign = 1;
+        int idx = 0;
+        while (sharedBits) {
+            if (sharedBits & 1) {
+                if (idx < r)          return 0;
+                if (idx < r + p) sign *= 1;
+                else                  sign *= -1;
+            }
+            sharedBits >>= 1;
+            ++idx;
+        }
+        return sign;
+    }
+
+
 } // end namespace mlir::cliff
 
 
