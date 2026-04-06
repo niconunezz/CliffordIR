@@ -20,4 +20,9 @@ def LinearEncodingAttr : CliffGPU_Attr<"LinearEncoding", "linear_encoding", []> 
 
     let hasCustomAssemblyFormat = 1;
     let genVerifyDecl = 1;
+
+    let extraClassDeclaration= [{
+            unsigned getTotalElemsPerThread(ArrayRef<int64_t> shape) const;
+            unsigned getElemsPerThread(ArrayRef<int64_t> shape) const;
+    }];
 }

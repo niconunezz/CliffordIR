@@ -1,3 +1,4 @@
+
 #include "clifford/Dialect/CliffGPU/IR/Dialect.h"
 
 #include "clifford/Dialect/CliffGPU/IR/Dialect.cpp.inc"
@@ -20,6 +21,17 @@ SmallVector<StringAttr> getStandardOutDims(MLIRContext *ctx, unsigned N) {
         ret.emplace_back(StringAttr::get(ctx, llvm::Twine("dim") + llvm::Twine(i)));
     }
     return ret;
+}
+unsigned LinearEncodingAttr::getElemsPerThread(ArrayRef<int64_t> shape) const {
+    const auto &ll = getLinearLayout();
+
+    StringAttr kReg = StringAttr::get(getContext(), "register");
+    return ll.getInDimSize(kReg);
+}
+
+
+unsigned LinearEncodingAttr::getTotalElemsPerThread(ArrayRef<int64_t> shape) const {
+    return getElemsPerThread(shape);
 }
 
 
