@@ -7,48 +7,120 @@ using namespace mlir::cliff;
 using namespace llvm;
 
 LogicalResult GeoProd::verify() {
-    auto LhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
-    auto LhsMask = cast<Cliff_MultivectorType>(LhsTy).getMask();
+    auto lhsTensor = dyn_cast<RankedTensorType>(getLhs().getType());
+    auto rhsTensor = dyn_cast<RankedTensorType>(getRhs().getType());
+    auto outTensor = dyn_cast<RankedTensorType>(getOut().getType());
 
-    auto RhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
-    auto RhsMask = cast<Cliff_MultivectorType>(RhsTy).getMask();
+    if (!lhsTensor || !rhsTensor || !outTensor)
+        return emitError("operands must be ranked tensors");
 
-    auto OutTy = cast<RankedTensorType>(getOut().getType()).getElementType();
-    auto OutMask = cast<Cliff_MultivectorType>(OutTy).getMask();
+    auto lhsTy = dyn_cast<Cliff_MultivectorType>(lhsTensor.getElementType());
+    auto rhsTy = dyn_cast<Cliff_MultivectorType>(rhsTensor.getElementType());
+    auto outTy = dyn_cast<Cliff_MultivectorType>(outTensor.getElementType());
 
-    // if ((LhsMask ^ RhsMask) != OutMask) 
-    //     return emitError("Mask out should be xor(maskLHS, maskRHS) but isnt");
+    if (!lhsTy || !rhsTy || !outTy)
+        return emitError("tensor elements must be multivector types");
+
+    if (lhsTy.getSpace() != rhsTy.getSpace() || 
+        lhsTy.getSpace() != outTy.getSpace())
+        return emitError("all operands must belong to the same algebra");
+
+    auto algebra = dyn_cast<CliffordAlgebraAttr>(lhsTy.getSpace());
+    if (!algebra)
+        return emitError("algebra attribute must be a CliffordAlgebraAttr");
+
+    unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
+    uint64_t lhsMask = lhsTy.getMask();
+    uint64_t rhsMask = rhsTy.getMask();
+    uint64_t outMask = outTy.getMask();
+    
+    // scalar case
+    if (!lhsMask) {
+        int64_t resultMask = rhsMask;
+
+        if (resultMask != outMask) 
+            return emitError("The mask of the result is ") << outMask << " when it should be " << resultMask;
+    
+        return success();
+    }
+    
+    if (!rhsMask) {
+        int64_t resultMask = lhsMask;
+        if (resultMask != outMask) 
+            return emitError("The mask of the result is ") << outMask << " when it should be " << resultMask;
+    
+        return success();
+    }
+    
+    // to explain how this works, lets use an example using PG2d (p=2, q=0, r=1)
+    // we represent an individual basis $e_{i}$ as a 3 bit number (as we have 8 possible combinations)
+    // where each of his active basis represent his bit. This results in the next mapping,
+    // s = 000, e0 = 001, e1 = 010, e2 = 100, e01 = 001, e02 = 101, e12 = 110, e012 = 111
+    // Notice this numbers are an unordered list, if we ordered them it would look like
+    // s, e0, e1, e01, e2, e02, e12, e123. Using this new ordered list we can represent an a
+    // linear combination of this bases as an 8 bit number where each of the bits represents
+    // if the corresponding basis is active (has a non-zero factor).
+    // Set this ground-rules its easy to understand the following algorithm.
+    // Note : The scalar case is kind of strange as 0...1 xor 0...1 = 0...0 but scalars dont dissappear,
+    // for now we will force the scalar bit to be always 0 and assume there is always a scalar component. 
+
+    if ((lhsMask & 1 != 0) || (rhsMask & 1 != 0))
+        return emitError("lhsMask and rhsMask last bit should be always zero!");
+    
+
+    int64_t resultMask = 0;
+    while (lhsMask) {
+        int lhsIndex = __builtin_ctz(lhsMask);
+        int RhsMaskCopy = rhsMask;
+        while (RhsMaskCopy) {
+            int rhsIndex = __builtin_ctz(RhsMaskCopy);
+
+            int newBasis = lhsIndex ^ rhsIndex;
+            int newSign = metricSign(lhsIndex, rhsIndex, p, q, r);
+
+            if (newSign != 0) {
+                resultMask |= (1ULL << newBasis);
+            }
+            
+            RhsMaskCopy &= (RhsMaskCopy - 1);
+        }
+        lhsMask &= (lhsMask - 1);
+    }
+
+
+    if (resultMask != outMask) 
+        return emitError("The mask of the result is ") << outMask << " when it should be " << resultMask;
 
     return success();
 }
 
 LogicalResult Add::verify() {
-    auto LhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
-    auto LhsMask = cast<Cliff_MultivectorType>(LhsTy).getMask();
+    auto lhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
+    auto lhsMask = cast<Cliff_MultivectorType>(lhsTy).getMask();
 
-    auto RhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
-    auto RhsMask = cast<Cliff_MultivectorType>(RhsTy).getMask();
+    auto rhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
+    auto rhsMask = cast<Cliff_MultivectorType>(rhsTy).getMask();
 
-    auto OutTy = cast<RankedTensorType>(getOut().getType()).getElementType();
-    auto OutMask = cast<Cliff_MultivectorType>(OutTy).getMask();
+    auto outTy = cast<RankedTensorType>(getOut().getType()).getElementType();
+    auto outMask = cast<Cliff_MultivectorType>(outTy).getMask();
 
-    if ((LhsMask | RhsMask) != OutMask) 
+    if ((lhsMask | rhsMask) != outMask) 
         return emitError("Mask out should be or(maskLHS, maskRHS) but isnt");
 
     return success();
 }
 
 LogicalResult Sub::verify() {
-    auto LhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
-    auto LhsMask = cast<Cliff_MultivectorType>(LhsTy).getMask();
+    auto lhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
+    auto lhsMask = cast<Cliff_MultivectorType>(lhsTy).getMask();
 
-    auto RhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
-    auto RhsMask = cast<Cliff_MultivectorType>(RhsTy).getMask();
+    auto rhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
+    auto rhsMask = cast<Cliff_MultivectorType>(rhsTy).getMask();
 
-    auto OutTy = cast<RankedTensorType>(getOut().getType()).getElementType();
-    auto OutMask = cast<Cliff_MultivectorType>(OutTy).getMask();
+    auto outTy = cast<RankedTensorType>(getOut().getType()).getElementType();
+    auto outMask = cast<Cliff_MultivectorType>(outTy).getMask();
 
-    if ((LhsMask | RhsMask) != OutMask) 
+    if ((lhsMask | rhsMask) != outMask) 
         return emitError("Mask out should be or(maskLHS, maskRHS) but isnt");
 
     return success();
