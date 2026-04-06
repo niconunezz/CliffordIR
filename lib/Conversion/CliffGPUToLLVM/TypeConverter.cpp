@@ -14,14 +14,12 @@
 using namespace mlir;
 using namespace mlir::clg;
 
-
-
-
 CliffGPUToLLVMTypeConverter::CliffGPUToLLVMTypeConverter(MLIRContext *ctx) : context(ctx) {
 
     addConversion([ctx](cliff::Cliff_MultivectorType mvector) {
         int numComponents = __builtin_popcountll(mvector.getMask());
-        llvm::errs() << "numComponents : " << numComponents << "\n";
+        // scalar case
+        numComponents = numComponents > 0 ? numComponents : 1;
         return LLVM::LLVMArrayType::get(ctx, mvector.getDtype(), numComponents);
     });
 
@@ -42,7 +40,7 @@ CliffGPUToLLVMConversionTarget::CliffGPUToLLVMConversionTarget(MLIRContext &ctx,
      const TypeConverter &typeConverter) : ConversionTarget(ctx) {
 
     addLegalOp<ModuleOp>();
-    addLegalDialect<mlir::LLVM::LLVMDialect>();
+    addLegalDialect<mlir::LLVM::LLVMDialect, mlir::arith::ArithDialect>();
     addIllegalDialect<cliff::CliffDialect, clg::CliffGPUDialect>();
 
 }
