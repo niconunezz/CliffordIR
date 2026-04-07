@@ -24,15 +24,6 @@ using namespace mlir;
 using namespace mlir::cliff;
 using namespace mlir::clg;
 
-struct ProductTerm {
-    int resultBit;
-    int lhsBit;
-    int rhsBit;
-    int sign;
-};
-
-
-
 class CliffGeoProdOpPattern : public OpConversionPattern<GeoProd> {
 public:
     using OpConversionPattern::OpConversionPattern;
@@ -60,7 +51,15 @@ public:
         unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
         uint64_t lhsMask = lhsTy.getMask();
         uint64_t rhsMask = rhsTy.getMask();
+        
+        llvm::DenseMap<int, int> basisToOffset;
         uint64_t outMask = outTy.getMask();
+        int off = 0;
+        while (outMask) {
+            basisToOffset[__builtin_ctz(outMask)] = off;
+            off++;
+            outMask &= (outMask - 1);
+        }
 
         // codegen
         auto loc = op.getLoc();
@@ -78,6 +77,8 @@ public:
         assert(newResultTypes.size() == 1 && "GeoProd should return exactly 1 argument");
         
         Type returnType = newResultTypes[0];
+        Value result = LLVM::UndefOp::create(rewriter, loc, returnType);
+
         // scalar case
         if (!lhsMask || !rhsMask) {
 
@@ -86,7 +87,6 @@ public:
             auto dynMask = !lhsMask ? rhsMask : lhsMask;
             auto cstScalar = LLVM::ExtractValueOp::create(rewriter, loc, cstMultivector, 0);
                 
-            Value result = LLVM::UndefOp::create(rewriter, loc, returnType);
             int idx = 0;
             while (dynMask) {
 
@@ -101,48 +101,44 @@ public:
             return success();
         }
 
+        int i = 0;
+        while (lhsMask) {
+            int j = 0;
+            int lhsBasis = __builtin_ctz(lhsMask);
+            int rhsMaskCopy = rhsMask;
 
-        // SmallVector<ProductTerm> productTerms;
-        // while (lhsMask) {
-        //     int lhsBasis = __builtin_ctz(lhsMask);
-        //     while (rhsMask) {
-        //         int rhsBasis = __builtin_ctz(rhsMask);
+            auto currLhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, lhsMultivector, i);
 
-        //         int newBasis = lhsBasis ^ rhsBasis;
-        //         int newSign = reorderSign(lhsBasis, rhsBasis) * metricSign(lhsBasis, rhsBasis, p, q, r);
-        //         if (newSign != 0) {
-        //             ProductTerm term = {newBasis, lhsBasis, rhsBasis, newSign};
-        //             productTerms.push_back(term);
+            //todo : handle scalars
+            while (rhsMaskCopy) {
+                int rhsBasis = __builtin_ctz(rhsMaskCopy);
+                int newBasis = lhsBasis ^ rhsBasis;
+                int newSign = reorderSign(lhsBasis, rhsBasis) * metricSign(lhsBasis, rhsBasis, p, q, r);
 
-        //         }
+                if (newSign != 0) {
+                    
+                    auto currRhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, rhsMultivector, j);
+                    Value prod = arith::MulFOp::create(rewriter, loc, currLhsBasis, currRhsBasis);
+                    Value ret = newSign==1 ? prod : arith::NegFOp::create(rewriter, loc, prod);
+                    
+                    int outIndex = basisToOffset[newBasis];
+                    auto acc = LLVM::ExtractValueOp::create(rewriter, loc, result, {0, outIndex});
+                    Value currOutVal = arith::AddFOp::create(rewriter, loc, acc, ret);                    
+                    result = LLVM::InsertValueOp::create(rewriter, loc, result, currOutVal, {0, outIndex});
+
+                }
                 
-        //         rhsMask &= rhsMask - 1;
-        //     }
+                rhsMaskCopy &= rhsMaskCopy - 1;
+                ++j;
+            }
 
-        //     lhsMask &= lhsMask - 1;
-        // }
+            lhsMask &= lhsMask - 1;
+            ++i;
 
+        }
         
-
-        // for (auto &term : productTerms) {
-        //     auto [newBasis, lhsBasis, rhsBasis, newSign] = term;
-        //     auto fpTy = rewriter.getF32Type();
-        //     auto lhs_i = rewriter.create<LLVM::ExtractValueOp>(loc, fpTy, adaptorLHSMask, ArrayRef<int64_t>{lhsBasis});
-        //     auto rhs_j = rewriter.create<LLVM::ExtractValueOp>(loc, fpTy, adaptorRHSMask, ArrayRef<int64_t>{rhsBasis});
-
-        //     Value sign_i = rewriter.create<arith::ConstantOp>(loc, newSign);
-        //     Value lhs_rhs = rewriter.create<arith::MulFOp>(loc, lhs_i, rhs_i);
-        //     Value result = rewriter.create<arith::MulFOp>(loc, lhs_rhs, sign_i);
-
-        //     rewriter.create<LLVM::InsertValueOp>(loc, result, component, )
-
-
-        // }
-
-
+        rewriter.replaceOp(op, result);
         return success();
-
-
     }
 
 };
@@ -170,20 +166,18 @@ public:
             SmallVector<Type> converted;
             if (failed(converter->convertType(op.getArgument(i).getType(), converted)))
                 return rewriter.notifyMatchFailure(op, "Issue converting argument types");
-            llvm::errs() << "arg " << i << " converted to " << converted.size() << " types\n";
-            for (auto t : converted) llvm::errs() << "  -> " << t << "\n";
+            // llvm::errs() << "arg " << i << " converted to " << converted.size() << " types\n";
+            // for (auto t : converted) llvm::errs() << "  -> " << t << "\n";
             sigConversion.addInputs(i, converted);
         }
             
         SmallVector<Type> newResultTypes;
         if (failed(converter->convertTypes(op.getFunctionType().getResults(), newResultTypes)))
             return rewriter.notifyMatchFailure(op, "Issue converting function return types");
-        llvm::errs() << "Converted result type : " << newResultTypes[0] << "\n";
         
         SmallVector<Type> newArgTypes;
         for (const auto &arg : sigConversion.getConvertedTypes()) 
             newArgTypes.push_back(arg);
-        llvm::errs() << "Converted arg type : " << newArgTypes[0] << "\n";
 
         Type returnType = newResultTypes.empty()
             ? LLVM::LLVMVoidType::get(getContext())
