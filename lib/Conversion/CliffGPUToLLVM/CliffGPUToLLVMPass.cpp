@@ -49,16 +49,22 @@ public:
             return rewriter.notifyMatchFailure(op, "algebra attribute must be a CliffordAlgebraAttr");
 
         unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
-        uint64_t lhsMask = lhsTy.getMask();
-        uint64_t rhsMask = rhsTy.getMask();
-        
+
+        const uint64_t lhsMask = lhsTy.getMask();
+        const uint64_t rhsMask = rhsTy.getMask();
+        const uint64_t outMask = outTy.getMask();
+
+        uint64_t lhsMaskCopy = lhsMask;
+        uint64_t rhsMaskCopy = rhsMask;
+        uint64_t outMaskCopy = outMask;
+
+
         llvm::DenseMap<int, int> basisToOffset;
-        uint64_t outMask = outTy.getMask();
         int off = 0;
-        while (outMask) {
-            basisToOffset[__builtin_ctz(outMask)] = off;
+        while (outMaskCopy) {
+            basisToOffset[__builtin_ctz(outMaskCopy)] = off;
             off++;
-            outMask &= (outMask - 1);
+            outMaskCopy &= (outMaskCopy - 1);
         }
 
         // codegen
@@ -79,12 +85,12 @@ public:
         Type returnType = newResultTypes[0];
         Value result = LLVM::UndefOp::create(rewriter, loc, returnType);
 
-        // scalar case
-        if (!lhsMask || !rhsMask) {
+        // scalar case, e.g. ((e01 + 4) * (scalar))
+        if (lhsMask == 1 || rhsMask == 1) {
 
-            auto cstMultivector = !lhsMask ? lhsMultivector : rhsMultivector;
-            auto dynMultivector = !lhsMask ? rhsMultivector : lhsMultivector;
-            auto dynMask = !lhsMask ? rhsMask : lhsMask;
+            auto cstMultivector = (lhsMask == 1) ? lhsMultivector : rhsMultivector;
+            auto dynMultivector = (lhsMask == 1) ? rhsMultivector : lhsMultivector;
+            auto dynMask = (lhsMask == 1) ? rhsMaskCopy : lhsMaskCopy;
             auto cstScalar = LLVM::ExtractValueOp::create(rewriter, loc, cstMultivector, 0);
                 
             int idx = 0;
@@ -102,21 +108,22 @@ public:
         }
 
         int i = 0;
-        while (lhsMask) {
+
+        while (lhsMaskCopy) {
             int j = 0;
-            int lhsBasis = __builtin_ctz(lhsMask);
-            int rhsMaskCopy = rhsMask;
+            int lhsBasis = __builtin_ctz(lhsMaskCopy);
+            int rhsMaskIter = rhsMaskCopy;
 
             auto currLhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, lhsMultivector, i);
 
-            //todo : handle scalars
-            while (rhsMaskCopy) {
-                int rhsBasis = __builtin_ctz(rhsMaskCopy);
+            while (rhsMaskIter) {
+                int rhsBasis = __builtin_ctz(rhsMaskIter);
                 int newBasis = lhsBasis ^ rhsBasis;
-                int newSign = reorderSign(lhsBasis, rhsBasis) * metricSign(lhsBasis, rhsBasis, p, q, r);
+                int newSign = (!lhsBasis || !rhsBasis) ? 1 : 
+                               reorderSign(lhsBasis, rhsBasis) * metricSign(lhsBasis, rhsBasis, p, q, r);
 
                 if (newSign != 0) {
-                    
+
                     auto currRhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, rhsMultivector, j);
                     Value prod = arith::MulFOp::create(rewriter, loc, currLhsBasis, currRhsBasis);
                     Value ret = newSign==1 ? prod : arith::NegFOp::create(rewriter, loc, prod);
@@ -128,11 +135,11 @@ public:
 
                 }
                 
-                rhsMaskCopy &= rhsMaskCopy - 1;
+                rhsMaskIter &= rhsMaskIter - 1;
                 ++j;
             }
 
-            lhsMask &= lhsMask - 1;
+            lhsMaskCopy &= lhsMaskCopy - 1;
             ++i;
 
         }

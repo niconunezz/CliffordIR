@@ -30,9 +30,14 @@ LogicalResult GeoProd::verify() {
         return emitError("algebra attribute must be a CliffordAlgebraAttr");
 
     unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
-    uint64_t lhsMask = lhsTy.getMask();
-    uint64_t rhsMask = rhsTy.getMask();
-    uint64_t outMask = outTy.getMask();
+
+    const uint64_t lhsMask = lhsTy.getMask();
+    const uint64_t rhsMask = rhsTy.getMask();
+    const uint64_t outMask = outTy.getMask();
+    
+    uint64_t lhsMaskCopy = lhsMask;
+    uint64_t rhsMaskCopy = rhsMask;
+    uint64_t outMaskCopy = outMask;
     
     // scalar case
     if (!lhsMask) {
@@ -62,18 +67,18 @@ LogicalResult GeoProd::verify() {
     // if the corresponding basis is active (has a non-zero factor).
     // Set this ground-rules its easy to understand the following algorithm.
     // Note : The scalar case is kind of strange as 0...1 xor 0...1 = 0...0 but scalars dont dissappear,
-    // for now we will force the scalar bit to be always 0 and assume there is always a scalar component. 
+    // for now we will force the scalar bit to be always 1 and assume there is always a scalar component. 
 
-    if ((lhsMask & 1 != 0) || (rhsMask & 1 != 0))
-        return emitError("lhsMask and rhsMask last bit should be always zero!");
+    if ((lhsMask & 1 == 0) || (rhsMask & 1 == 0))
+        return emitError("lhsMask and rhsMask last bit should be always one!");
     
 
     int64_t resultMask = 0;
-    while (lhsMask) {
-        int lhsIndex = __builtin_ctz(lhsMask);
-        int rhsMaskCopy = rhsMask;
-        while (rhsMaskCopy) {
-            int rhsIndex = __builtin_ctz(rhsMaskCopy);
+    while (lhsMaskCopy) {
+        int lhsIndex = __builtin_ctz(lhsMaskCopy);
+        int rhsMaskIter = rhsMaskCopy;
+        while (rhsMaskIter) {
+            int rhsIndex = __builtin_ctz(rhsMaskIter);
 
             int newBasis = lhsIndex ^ rhsIndex;
             int newSign = metricSign(lhsIndex, rhsIndex, p, q, r);
@@ -82,12 +87,12 @@ LogicalResult GeoProd::verify() {
                 resultMask |= (1ULL << newBasis);
             }
             
-            rhsMaskCopy &= (rhsMaskCopy - 1);
+            rhsMaskIter &= (rhsMaskIter - 1);
         }
-        lhsMask &= (lhsMask - 1);
+        lhsMaskCopy &= (lhsMaskCopy - 1);
     }
 
-
+    
     if (resultMask != outMask) 
         return emitError("The mask of the result is ") << outMask << " when it should be " << resultMask;
 

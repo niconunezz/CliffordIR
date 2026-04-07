@@ -18,8 +18,6 @@ CliffGPUToLLVMTypeConverter::CliffGPUToLLVMTypeConverter(MLIRContext *ctx) : con
 
     addConversion([ctx](cliff::Cliff_MultivectorType mvector) {
         int numComponents = __builtin_popcountll(mvector.getMask());
-        // scalar case
-        numComponents = numComponents > 0 ? numComponents : 1;
         return LLVM::LLVMArrayType::get(ctx, mvector.getDtype(), numComponents);
     });
 
