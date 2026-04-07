@@ -71,9 +71,9 @@ LogicalResult GeoProd::verify() {
     int64_t resultMask = 0;
     while (lhsMask) {
         int lhsIndex = __builtin_ctz(lhsMask);
-        int RhsMaskCopy = rhsMask;
-        while (RhsMaskCopy) {
-            int rhsIndex = __builtin_ctz(RhsMaskCopy);
+        int rhsMaskCopy = rhsMask;
+        while (rhsMaskCopy) {
+            int rhsIndex = __builtin_ctz(rhsMaskCopy);
 
             int newBasis = lhsIndex ^ rhsIndex;
             int newSign = metricSign(lhsIndex, rhsIndex, p, q, r);
@@ -82,7 +82,7 @@ LogicalResult GeoProd::verify() {
                 resultMask |= (1ULL << newBasis);
             }
             
-            RhsMaskCopy &= (RhsMaskCopy - 1);
+            rhsMaskCopy &= (rhsMaskCopy - 1);
         }
         lhsMask &= (lhsMask - 1);
     }
