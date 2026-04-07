@@ -75,10 +75,9 @@ public:
         if (failed(converter->convertTypes(outTensor, newResultTypes)))
             return rewriter.notifyMatchFailure(op, "failed to convert return type");
 
-        Type returnType = newResultTypes.empty()
-            ? LLVM::LLVMVoidType::get(getContext())
-            : newResultTypes[0];
-
+        assert(newResultTypes.size() == 1 && "GeoProd should return exactly 1 argument");
+        
+        Type returnType = newResultTypes[0];
         // scalar case
         if (!lhsMask || !rhsMask) {
 
@@ -87,17 +86,18 @@ public:
             auto dynMask = !lhsMask ? rhsMask : lhsMask;
             auto cstScalar = LLVM::ExtractValueOp::create(rewriter, loc, cstMultivector, 0);
                 
+            Value result = LLVM::UndefOp::create(rewriter, loc, returnType);
+            int idx = 0;
             while (dynMask) {
-                int dynIdx = __builtin_ctz(dynMask);
-                    
-                auto dynBasis = LLVM::ExtractValueOp::create(rewriter, loc, dynMultivector, dynIdx);
-                    
+
+                auto dynBasis = LLVM::ExtractValueOp::create(rewriter, loc, dynMultivector, idx);
                 Value ret = arith::MulFOp::create(rewriter, loc, cstScalar, dynBasis);
-                    
-                LLVM::InsertValueOp::create(rewriter, loc, result, dynIdx )
+                result = LLVM::InsertValueOp::create(rewriter, loc, result, ret, {0, idx});
                 dynMask &= dynMask - 1;
+                idx++;
             }
-            rewriter.eraseOp(op);
+
+            rewriter.replaceOp(op, result);
             return success();
         }
 
