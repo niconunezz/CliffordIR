@@ -3,6 +3,7 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace mlir::clg

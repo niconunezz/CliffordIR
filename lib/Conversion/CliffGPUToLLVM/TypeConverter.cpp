@@ -38,7 +38,7 @@ CliffGPUToLLVMConversionTarget::CliffGPUToLLVMConversionTarget(MLIRContext &ctx,
      const TypeConverter &typeConverter) : ConversionTarget(ctx) {
 
     addLegalOp<ModuleOp>();
-    addLegalDialect<mlir::LLVM::LLVMDialect, mlir::arith::ArithDialect>();
+    addLegalDialect<mlir::LLVM::LLVMDialect, mlir::arith::ArithDialect, mlir::math::MathDialect>();
     addIllegalDialect<cliff::CliffDialect, clg::CliffGPUDialect>();
 
 }
