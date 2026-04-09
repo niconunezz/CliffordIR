@@ -5,12 +5,27 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
+#include "clifford/Dialect/Clifford/IR/CliffOpsEnums.cpp.inc"
 #include "clifford/Dialect/Clifford/IR/CliffTypes.h"
 
 using namespace mlir;
 using namespace mlir::cliff;
 
-// #define GET_TYPEDEF_CLASSES
-// #include "clifford/Dialect/Clifford/IR/CliffTypes.cpp.inc"
 
+
+uint64_t Cliff_MultivectorType::getActiveMask() const { return getMask(); }
+uint64_t Cliff_PointType::getActiveMask() const {
+    
+    auto space = getSpace();
+
+    assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGND algebras");
+
+    int n = space.getP() + 1;
+    uint64_t mask = 1;
+    for (int i = 0; i < n; ++i) {
+        int shift = !(1ULL << i);
+        mask |= (1ULL << shift);
+    }
+    return mask;
+}
 

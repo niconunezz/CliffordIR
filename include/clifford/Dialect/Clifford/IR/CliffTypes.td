@@ -1,8 +1,10 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
 include "CliffDialect.td"
+include "CliffTypeInterfaces.td"
 
-class Cliff_Type<string name, string typeMnemonic> : TypeDef<Cliff_Dialect, name> {
+
+class Cliff_Type<string name, string typeMnemonic, list<Trait> traits> : TypeDef<Cliff_Dialect, name, traits> {
     let mnemonic = typeMnemonic;
 }
 
@@ -12,7 +14,25 @@ def Cliff_FloatTensor : RankedTensorOf<[Cliff_Float]>;
 def Cliff_FloatLike : AnyTypeOf<[Cliff_Float, Cliff_FloatTensor]>;
 
 
-def Cliff_Multivector : Cliff_Type<"Cliff_Multivector", "multivector"> {
+def Cliff_Point : Cliff_Type<"Cliff_Point",
+                                 "point", 
+                                 [DeclareTypeInterfaceMethods<Cliff_GeometricObjectInterface>]> {
+    let summary = "A type that represents a point object in the specified algebra";
+    let description = [{
+        The `Point` type should be thinked of a more concret representation of a multivector.
+        It is neccesary for early on optimizations that are exlusive for points.
+    }];
+
+    let parameters = (ins "PointKindAttr" : $kind, "bool" : $normalized, "CliffordAlgebraAttr" : $space);
+    
+    let assemblyFormat = "`<` $kind `,` $normalized `,` $space `>`";
+
+}
+
+
+def Cliff_Multivector : Cliff_Type<"Cliff_Multivector",
+                                   "multivector", 
+                                   [DeclareTypeInterfaceMethods<Cliff_GeometricObjectInterface>]> {
     let summary = "A type for representing objects in cliffords algebra";
     let description = [{
         The `Multivector` type allows you to represent numbers of the cliffords
@@ -22,6 +42,7 @@ def Cliff_Multivector : Cliff_Type<"Cliff_Multivector", "multivector"> {
 
     let parameters = (ins "uint64_t":$mask, "Type":$dtype, "CliffordAlgebraAttr" : $space);
     let assemblyFormat = "`<` $mask `,` $dtype `,` $space `>`";
+
 }
 
 def Cliff_MultivctTensor : RankedTensorOf<[Cliff_Multivector]>;

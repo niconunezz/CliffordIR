@@ -14,6 +14,9 @@
 #define GET_ATTRDEF_CLASSES
 #include "clifford/Dialect/Clifford/IR/CliffAttrDefs.h.inc"
 
+
+#include "clifford/Dialect/Clifford/IR/TypeInterfaces.h.inc"
+
 #include "clifford/Dialect/Clifford/IR/CliffTypes.h"
 
 
