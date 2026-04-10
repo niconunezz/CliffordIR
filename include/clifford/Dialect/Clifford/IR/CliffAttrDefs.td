@@ -20,18 +20,34 @@ def AlgebraDefinition : Cliff_Attr<"CliffordAlgebra", "algebra_definition", []> 
     let genVerifyDecl = 1;
 }
 
-def PointKindAttr : I32EnumAttr<"PointKind", "",
-    [I32EnumAttrCase<"Euclidean", 0, "euclidean">,
-    I32EnumAttrCase<"Ideal", 1, "ideal">,
-    I32EnumAttrCase<"Unknown", 2, "unknown">]> {
 
+def PointKindEuclidean : I32EnumAttrCase<"Euclidean", 0, "euclidean">;
+def PointKindIdeal : I32EnumAttrCase<"Ideal", 1, "ideal">;
+def PointKindUnknown : I32EnumAttrCase<"Unknown", 2, "unknown">;
+
+def PointKind : I32EnumAttr<"PointKind", "",
+    [PointKindEuclidean,
+    PointKindIdeal,
+    PointKindUnknown]> {
+    
+    let genSpecializedAttr = 0;
+    let cppNamespace = "::mlir::cliff";
+}
+def PointKindAttr : EnumAttr<Cliff_Dialect, PointKind, "point_kind">;
+
+
+def GeometricKindPoint : I32EnumAttrCase<"Point", 0, "point">;
+def GeometricKindLine : I32EnumAttrCase<"Line", 1, "line">;
+def GeometricKindMotor : I32EnumAttrCase<"Motor", 2, "motor">;
+def GeometricKindUnknown : I32EnumAttrCase<"Unknown", 3, "unknown">;
+
+
+def GeometricKind : I32EnumAttr<"GeometricKind", "",
+    [GeometricKindPoint, GeometricKindLine, 
+    GeometricKindMotor, GeometricKindUnknown]> {
+    
+    let genSpecializedAttr = 0;
     let cppNamespace = "::mlir::cliff";
 }
 
-def GeometricKindAttr : I32EnumAttr<"GeometricKind", "",
-    [I32EnumAttrCase<"Point", 0, "point">,
-    I32EnumAttrCase<"Line", 1, "line">,
-    I32EnumAttrCase<"Unknown", 2, "unknown">]> {
-        
-    let cppNamespace = "::mlir::cliff";
-}
+def GeometricKindAttr : EnumAttr<Cliff_Dialect, GeometricKind, "geo_kind">;
