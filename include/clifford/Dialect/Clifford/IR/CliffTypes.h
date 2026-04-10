@@ -6,7 +6,6 @@
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 
-#include "clifford/Dialect/Clifford/IR/CliffOpsEnums.h.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "clifford/Dialect/Clifford/IR/CliffTypes.h.inc"
