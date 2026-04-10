@@ -10,6 +10,7 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 
 #include "mlir/IR/OpImplementation.h"
+#include "clifford/Dialect/Clifford/IR/TypeInterfaces.cpp.inc"
 
 #include "clifford/Dialect/Clifford/IR/Dialect.cpp.inc"
 
@@ -24,6 +25,8 @@ using namespace mlir::cliff;
 #undef GET_ATTRDEF_CLASSES
 
 namespace mlir::cliff{
+
+
 
 void FuncOp::print(OpAsmPrinter &p) {
     function_interface_impl::printFunctionOp(
@@ -43,8 +46,6 @@ ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
       getFunctionTypeAttrName(result.name), buildFuncType,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
-
-
 
 
 Attribute CliffordAlgebraAttr::parse(AsmParser &parser, Type type) {
@@ -161,6 +162,7 @@ void CliffDialect::initialize() {
     #define GET_ATTRDEF_LIST
     #include "clifford/Dialect/Clifford/IR/CliffAttrDefs.cpp.inc"
         >();
+
 
         addInterfaces<CliffOpAsmDialectInterface>();
 
