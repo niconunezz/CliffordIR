@@ -23,9 +23,39 @@ def Cliff_Point : Cliff_Type<"Cliff_Point",
         It is neccesary for early on optimizations that are exlusive for points.
     }];
 
-    let parameters = (ins "PointKindAttr" : $kind, "bool" : $normalized, "CliffordAlgebraAttr" : $space);
+    let parameters = (ins AttrParameter<"::mlir::cliff::PointKindAttr", "">:$kind, "bool" : $normalized, "CliffordAlgebraAttr" : $space);
     
     let assemblyFormat = "`<` $kind `,` $normalized `,` $space `>`";
+
+}
+
+def Cliff_Line : Cliff_Type<"Cliff_Line",
+                                 "line", 
+                                 [DeclareTypeInterfaceMethods<Cliff_GeometricObjectInterface>]> {
+    let summary = "A type that represents a line in the specified algebra";
+    let description = [{
+        The `Line` type should be thinked of a more concret representation of a multivector.
+        It is neccesary for early on optimizations that are exlusive for lines.
+    }];
+
+    let parameters = (ins "bool" : $normalized, "CliffordAlgebraAttr" : $space);
+    
+    let assemblyFormat = "`<` $normalized `,` $space `>`";
+
+}
+
+def Cliff_Motor : Cliff_Type<"Cliff_Motor",
+                                 "motor", 
+                                 [DeclareTypeInterfaceMethods<Cliff_GeometricObjectInterface>]> {
+    let summary = "A type that represents a motor in the specified algebra";
+    let description = [{
+        The `Motor` type should be thinked of a more concret representation of a multivector.
+        It is neccesary for early on optimizations that are exlusive for lines.
+    }];
+
+    let parameters = (ins "bool" : $normalized, "CliffordAlgebraAttr" : $space);
+    
+    let assemblyFormat = "`<` $normalized `,` $space `>`";
 
 }
 
@@ -40,12 +70,15 @@ def Cliff_Multivector : Cliff_Type<"Cliff_Multivector",
     
     }];
 
-    let parameters = (ins "uint64_t":$mask, "Type":$dtype, "CliffordAlgebraAttr" : $space);
-    let assemblyFormat = "`<` $mask `,` $dtype `,` $space `>`";
+    let parameters = (ins "uint64_t":$mask, "Type":$dtype,
+                      AttrParameter<"::mlir::cliff::GeometricKindAttr", ""> : $kind,
+                      "CliffordAlgebraAttr" : $space);
 
+    let assemblyFormat = "`<` $mask `,` $kind `,` $dtype `,` $space `>`";
 }
 
-def Cliff_MultivctTensor : RankedTensorOf<[Cliff_Multivector]>;
+def Cliff_GeometricKind : AnyTypeOf<[Cliff_Multivector, Cliff_Point, Cliff_Line, Cliff_Motor]>;
 
+def Cliff_MultivctTensor : RankedTensorOf<[Cliff_GeometricKind]>;
 
 def Cliff_AnyType : AnyTypeOf<[Cliff_Multivector, Cliff_MultivctTensor, Cliff_FloatLike]>;
