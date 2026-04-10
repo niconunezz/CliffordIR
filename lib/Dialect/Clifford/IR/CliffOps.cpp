@@ -14,26 +14,26 @@ LogicalResult GeoProd::verify() {
     if (!lhsTensor || !rhsTensor || !outTensor)
         return emitError("operands must be ranked tensors");
 
-    auto lhsTy = dyn_cast<Cliff_MultivectorType>(lhsTensor.getElementType());
-    auto rhsTy = dyn_cast<Cliff_MultivectorType>(rhsTensor.getElementType());
-    auto outTy = dyn_cast<Cliff_MultivectorType>(outTensor.getElementType());
+    auto lhsTy = dyn_cast<Cliff_GeometricObjectInterface>(lhsTensor.getElementType());
+    auto rhsTy = dyn_cast<Cliff_GeometricObjectInterface>(rhsTensor.getElementType());
+    auto outTy = dyn_cast<Cliff_GeometricObjectInterface>(outTensor.getElementType());
 
     if (!lhsTy || !rhsTy || !outTy)
         return emitError("tensor elements must be multivector types");
 
-    if (lhsTy.getSpace() != rhsTy.getSpace() || 
-        lhsTy.getSpace() != outTy.getSpace())
+    if (lhsTy.getAlgebra() != rhsTy.getAlgebra() || 
+        lhsTy.getAlgebra() != outTy.getAlgebra())
         return emitError("all operands must belong to the same algebra");
 
-    auto algebra = dyn_cast<CliffordAlgebraAttr>(lhsTy.getSpace());
+    auto algebra = dyn_cast<CliffordAlgebraAttr>(lhsTy.getAlgebra());
     if (!algebra)
         return emitError("algebra attribute must be a CliffordAlgebraAttr");
 
     unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
 
-    const uint64_t lhsMask = lhsTy.getMask();
-    const uint64_t rhsMask = rhsTy.getMask();
-    const uint64_t outMask = outTy.getMask();
+    const uint64_t lhsMask = lhsTy.getActiveMask();
+    const uint64_t rhsMask = rhsTy.getActiveMask();
+    const uint64_t outMask = outTy.getActiveMask();
     
     uint64_t lhsMaskCopy = lhsMask;
     uint64_t rhsMaskCopy = rhsMask;
@@ -101,13 +101,13 @@ LogicalResult GeoProd::verify() {
 
 LogicalResult Add::verify() {
     auto lhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
-    auto lhsMask = cast<Cliff_MultivectorType>(lhsTy).getMask();
+    auto lhsMask = cast<Cliff_MultivectorType>(lhsTy).getActiveMask();
 
     auto rhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
-    auto rhsMask = cast<Cliff_MultivectorType>(rhsTy).getMask();
+    auto rhsMask = cast<Cliff_MultivectorType>(rhsTy).getActiveMask();
 
     auto outTy = cast<RankedTensorType>(getOut().getType()).getElementType();
-    auto outMask = cast<Cliff_MultivectorType>(outTy).getMask();
+    auto outMask = cast<Cliff_MultivectorType>(outTy).getActiveMask();
 
     if ((lhsMask | rhsMask) != outMask) 
         return emitError("Mask out should be or(maskLHS, maskRHS) but isnt");
@@ -117,13 +117,13 @@ LogicalResult Add::verify() {
 
 LogicalResult Sub::verify() {
     auto lhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
-    auto lhsMask = cast<Cliff_MultivectorType>(lhsTy).getMask();
+    auto lhsMask = cast<Cliff_MultivectorType>(lhsTy).getActiveMask();
 
     auto rhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
-    auto rhsMask = cast<Cliff_MultivectorType>(rhsTy).getMask();
+    auto rhsMask = cast<Cliff_MultivectorType>(rhsTy).getActiveMask();
 
     auto outTy = cast<RankedTensorType>(getOut().getType()).getElementType();
-    auto outMask = cast<Cliff_MultivectorType>(outTy).getMask();
+    auto outMask = cast<Cliff_MultivectorType>(outTy).getActiveMask();
 
     if ((lhsMask | rhsMask) != outMask) 
         return emitError("Mask out should be or(maskLHS, maskRHS) but isnt");
