@@ -12,7 +12,6 @@ using namespace mlir;
 using namespace mlir::cliff;
 
 
-
 uint64_t Cliff_MultivectorType::getActiveMask() const { return getMask(); }
 uint64_t Cliff_PointType::getActiveMask() const {
     
@@ -29,3 +28,13 @@ uint64_t Cliff_PointType::getActiveMask() const {
     return mask;
 }
 
+//todo : generalize to more than PG2D
+uint64_t Cliff_LineType::getActiveMask() const { return 23; }
+
+//todo
+uint64_t Cliff_MotorType::getActiveMask() const { return 1; }
+
+CliffordAlgebraAttr Cliff_MultivectorType::getAlgebra() const { return getSpace(); }
+CliffordAlgebraAttr Cliff_PointType::getAlgebra() const { return getSpace(); }
+CliffordAlgebraAttr Cliff_LineType::getAlgebra() const { return getSpace(); }
+CliffordAlgebraAttr Cliff_MotorType::getAlgebra() const { return getSpace(); }

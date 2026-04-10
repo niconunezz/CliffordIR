@@ -9,6 +9,11 @@ def Cliff_GeometricObjectInterface : TypeInterface<"Cliff_GeometricObjectInterfa
         InterfaceMethod<
             /*desc=*/"Get active basis mask.",
             /*retType=*/"uint64_t",
-            /*methodName=*/"getActiveMask">
+            /*methodName=*/"getActiveMask">,
+        InterfaceMethod<
+            /*desc=*/"Get space.",
+            /*retType=*/"mlir::cliff::CliffordAlgebraAttr",
+            /*methodName=*/"getAlgebra">,
+
     ];
 }
