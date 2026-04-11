@@ -25,7 +25,6 @@ mlir_tablegen(CliffOpsEnums.cpp.inc -gen-enum-defs)
 
 set(LLVM_TARGET_DEFINITIONS CliffTypeInterfaces.td)
 mlir_tablegen(TypeInterfaces.h.inc -gen-type-interface-decls)
-#? we dont really need this? 
 mlir_tablegen(TypeInterfaces.cpp.inc -gen-type-interface-defs)
 
 
