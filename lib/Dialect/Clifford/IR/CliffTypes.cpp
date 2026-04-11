@@ -13,6 +13,7 @@ using namespace mlir::cliff;
 
 
 uint64_t Cliff_MultivectorType::getActiveMask() const { return getMask(); }
+//todo : generalize to more than PG2D and PG3D
 uint64_t Cliff_PointType::getActiveMask() const {
     
     auto space = getSpace();
