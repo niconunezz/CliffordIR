@@ -39,12 +39,14 @@ def PointKindAttr : EnumAttr<Cliff_Dialect, PointKind, "point_kind">;
 def GeometricKindPoint : I32EnumAttrCase<"Point", 0, "point">;
 def GeometricKindLine : I32EnumAttrCase<"Line", 1, "line">;
 def GeometricKindMotor : I32EnumAttrCase<"Motor", 2, "motor">;
-def GeometricKindUnknown : I32EnumAttrCase<"Unknown", 3, "unknown">;
+def GeometricKindScalar : I32EnumAttrCase<"Scalar", 3, "scalar">;
+def GeometricKindUnknown : I32EnumAttrCase<"Unknown", 4, "unknown">;
 
 
 def GeometricKind : I32EnumAttr<"GeometricKind", "",
     [GeometricKindPoint, GeometricKindLine, 
-    GeometricKindMotor, GeometricKindUnknown]> {
+    GeometricKindMotor, GeometricKindScalar,
+    GeometricKindUnknown]> {
     
     let genSpecializedAttr = 0;
     let cppNamespace = "::mlir::cliff";
