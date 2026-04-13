@@ -37,7 +37,7 @@ def Cliff_Point : Cliff_Type<"Cliff_Point",
         It is neccesary for early on optimizations that are exlusive for points.
     }];
 
-    let parameters = (ins AttrParameter<"::mlir::cliff::PointKindAttr", "">:$kind, "bool" : $normalized, "CliffordAlgebraAttr" : $space);
+    let parameters = (ins AttrParameter<"::mlir::cliff::ObjectKindAttr", "">:$kind, "bool" : $normalized, "CliffordAlgebraAttr" : $space);
     
     let assemblyFormat = "`<` $kind `,` $normalized `,` $space `>`";
 
@@ -52,9 +52,9 @@ def Cliff_Line : Cliff_Type<"Cliff_Line",
         It is neccesary for early on optimizations that are exlusive for lines.
     }];
 
-    let parameters = (ins "bool" : $normalized, "CliffordAlgebraAttr" : $space);
+    let parameters = (ins AttrParameter<"::mlir::cliff::ObjectKindAttr", "">:$kind, "bool" : $normalized, "CliffordAlgebraAttr" : $space);
     
-    let assemblyFormat = "`<` $normalized `,` $space `>`";
+    let assemblyFormat = "`<` $kind `,` $normalized `,` $space `>`";
 
 }
 
@@ -92,6 +92,11 @@ def Cliff_Multivector : Cliff_Type<"Cliff_Multivector",
 }
 
 def Cliff_GeometricKind : AnyTypeOf<[Cliff_Multivector, Cliff_Point, Cliff_Scalar, Cliff_Line, Cliff_Motor]>;
+
+def Cliff_LineOrPointTensor : RankedTensorOf<[Cliff_Point, Cliff_Line]>;
+def Cliff_ScalarTensor : RankedTensorOf<[Cliff_Scalar]>;
+def Cliff_MotorTensor : RankedTensorOf<[Cliff_Motor]>;
+
 
 def Cliff_MultivctTensor : RankedTensorOf<[Cliff_GeometricKind]>;
 

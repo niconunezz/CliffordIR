@@ -21,19 +21,19 @@ def AlgebraDefinition : Cliff_Attr<"CliffordAlgebra", "algebra_definition", []> 
 }
 
 
-def PointKindEuclidean : I32EnumAttrCase<"Euclidean", 0, "euclidean">;
-def PointKindIdeal : I32EnumAttrCase<"Ideal", 1, "ideal">;
-def PointKindUnknown : I32EnumAttrCase<"Unknown", 2, "unknown">;
+def EuclideanKind : I32EnumAttrCase<"Euclidean", 0, "euclidean">;
+def IdealKind : I32EnumAttrCase<"Ideal", 1, "ideal">;
+def UnknownKind : I32EnumAttrCase<"Unknown", 2, "unknown">;
 
-def PointKind : I32EnumAttr<"PointKind", "",
-    [PointKindEuclidean,
-    PointKindIdeal,
-    PointKindUnknown]> {
+def ObjectKind : I32EnumAttr<"PointKind", "",
+    [EuclideanKind,
+    IdealKind,
+    UnknownKind]> {
     
     let genSpecializedAttr = 0;
     let cppNamespace = "::mlir::cliff";
 }
-def PointKindAttr : EnumAttr<Cliff_Dialect, PointKind, "point_kind">;
+def ObjectKindAttr : EnumAttr<Cliff_Dialect, ObjectKind, "object_kind">;
 
 
 def GeometricKindPoint : I32EnumAttrCase<"Point", 0, "point">;
