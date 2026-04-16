@@ -7,7 +7,6 @@
 #include "mlir/Support/LLVM.h"
 
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
-#include "clifford/Dialect/CliffGPU/IR/Dialect.h"
 
 namespace mlir::cliff {
     #define GEN_PASS_DEF_GEOMETRICTYPECONVERSIONPASS
