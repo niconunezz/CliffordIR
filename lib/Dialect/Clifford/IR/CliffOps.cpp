@@ -60,7 +60,7 @@ LogicalResult GeoProd::verify() {
     // to explain how this works, lets use an example using PG2d (p=2, q=0, r=1)
     // we represent an individual basis $e_{i}$ as a 3 bit number (as we have 8 possible combinations)
     // where each of his active basis represent his bit. This results in the next mapping,
-    // s = 000, e0 = 001, e1 = 010, e2 = 100, e01 = 001, e02 = 101, e12 = 110, e012 = 111
+    // s = 000, e0 = 001, e1 = 010, e2 = 100, e01 = 011, e02 = 101, e12 = 110, e012 = 111
     // Notice this numbers are an unordered list, if we ordered them it would look like
     // s, e0, e1, e01, e2, e02, e12, e123. Using this new ordered list we can represent an a
     // linear combination of this bases as an 8 bit number where each of the bits represents
