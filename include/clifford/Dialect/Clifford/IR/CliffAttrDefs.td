@@ -25,7 +25,7 @@ def EuclideanKind : I32EnumAttrCase<"Euclidean", 0, "euclidean">;
 def IdealKind : I32EnumAttrCase<"Ideal", 1, "ideal">;
 def UnknownKind : I32EnumAttrCase<"Unknown", 2, "unknown">;
 
-def ObjectKind : I32EnumAttr<"PointKind", "",
+def ObjectKind : I32EnumAttr<"ObjectKind", "",
     [EuclideanKind,
     IdealKind,
     UnknownKind]> {
