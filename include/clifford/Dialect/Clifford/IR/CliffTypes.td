@@ -61,7 +61,22 @@ def Cliff_Line : Cliff_ObjType<"Cliff_Line",
     let assemblyFormat = "`<` $kind `,` $normalized `,` $space `>`";
 
 }
+/*
+def Cliff_Plane : Cliff_ObjType<"Cliff_Plane",
+                                 "plane", 
+                                 [DeclareTypeInterfaceMethods<Cliff_GeometricElementInterface>]> {
+    let summary = "A type that represents a plane in the specified algebra";
+    let description = [{
+        The `Plane` type should be thinked of a more concret representation of a multivector.
+        It is neccesary for early on optimizations that are exlusive forpPlanes.
+    }];
 
+    let parameters = (ins AttrParameter<"::mlir::cliff::ObjectKindAttr", "">:$kind, "bool" : $normalized, "CliffordAlgebraAttr" : $space);
+    
+    let assemblyFormat = "`<` $kind `,` $normalized `,` $space `>`";
+
+}
+*/
 
 def Cliff_Motor : Cliff_ObjType<"Cliff_Motor",
                                  "motor", 
