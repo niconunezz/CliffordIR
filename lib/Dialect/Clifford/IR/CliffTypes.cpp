@@ -11,38 +11,72 @@
 using namespace mlir;
 using namespace mlir::cliff;
 
+uint64_t fillWithGospersHack(int k, int n) {
 
-uint64_t Cliff_MultivectorType::getActiveMask() const { return getMask(); }
+    int set = (1 << k) - 1;
+    int limit = (1 << n);
+    uint64_t ret = 1;
+    while (set < limit) {
 
-uint64_t Cliff_ScalarType::getActiveMask() const { return 1; }
-
-//todo : generalize to more than PG2D and PG3D
-uint64_t Cliff_PointType::getActiveMask() const {
-    
-    auto space = getSpace();
-
-    assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGND algebras");
-
-    int n = space.getP() + 1;
-    uint64_t mask = 1;
-    for (int i = 0; i < n; ++i) {
-        int shift = !(1ULL << i);
-        mask |= (1ULL << shift);
+        ret |= (1ULL << set);
+        int c = set & -set;
+        int r = set + c;
+        set = (((r ^ set) >> 2) / c) | r;
     }
-    return mask;
+
+    return ret;
 }
 
-//todo : generalize to more than PG2D
-uint64_t Cliff_LineType::getActiveMask() const { return 23; }
+
+
+uint64_t Cliff_ScalarType::getMask() const { return 1; }
+
+//todo : generalize to more than PG2D and PG3D if neccesary
+uint64_t Cliff_PointType::getMask() const {
+    
+    auto space = getSpace();
+    assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGA algebras");
+
+    int n = space.getP();
+    return fillWithGospersHack(n, n+1);
+}
+
+uint64_t Cliff_LineType::getMask() const {
+    auto space = getSpace();
+    assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGA algebras");
+
+    int n = space.getP();
+    return fillWithGospersHack(n-1, n+1);
+}
 
 //todo
-uint64_t Cliff_MotorType::getActiveMask() const { return 1; }
+uint64_t Cliff_MotorType::getMask() const { return 1; }
 
 
 
-CliffordAlgebraAttr Cliff_MultivectorType::getAlgebra() const { return getSpace(); }
-CliffordAlgebraAttr Cliff_PointType::getAlgebra() const { return getSpace(); }
-CliffordAlgebraAttr Cliff_LineType::getAlgebra() const { return getSpace(); }
-CliffordAlgebraAttr Cliff_MotorType::getAlgebra() const { return getSpace(); }
-CliffordAlgebraAttr Cliff_ScalarType::getAlgebra() const { return getSpace(); }
+Type Cliff_PointType::asMultivector() const {
+    auto mask = getMask();
+    return Cliff_MultivectorType::get(getContext(), mask,
+        Float32Type::get(getContext()), 
+        GeometricKindAttr::get(getContext(), GeometricKind::Point), 
+        getSpace());
+}
+Type Cliff_LineType::asMultivector() const { 
+    return Cliff_MultivectorType::get(getContext(), getMask(),
+        Float32Type::get(getContext()), 
+        GeometricKindAttr::get(getContext(), GeometricKind::Line), 
+        getSpace());
+}
+Type Cliff_MotorType::asMultivector() const { 
+    return Cliff_MultivectorType::get(getContext(), getMask(),
+        Float32Type::get(getContext()), 
+        GeometricKindAttr::get(getContext(), GeometricKind::Motor), 
+        getSpace());
+}
+Type Cliff_ScalarType::asMultivector() const { 
+    return Cliff_MultivectorType::get(getContext(), getMask(),
+        Float32Type::get(getContext()), 
+        GeometricKindAttr::get(getContext(), GeometricKind::Scalar), 
+        getSpace());
+}
 

@@ -36,33 +36,20 @@ CliffTypeConverter::CliffTypeConverter(MLIRContext *ctx) : context(ctx) {
         return tensor;
     });
 
-
     addConversion([&](Cliff_LineType obj) {
-        return Cliff_MultivectorType::get(context, obj.getActiveMask(), 
-        Float32Type::get(context), 
-        GeometricKindAttr::get(context, GeometricKind::Line), 
-        obj.getSpace());
+        return obj.asMultivector();
     });
     
     addConversion([&](Cliff_PointType obj) {
-        return Cliff_MultivectorType::get(context, obj.getActiveMask(),
-        Float32Type::get(context), 
-        GeometricKindAttr::get(context, GeometricKind::Point), 
-        obj.getSpace()); 
+        return obj.asMultivector();
     });
     
     addConversion([&](Cliff_MotorType obj) {
-        return Cliff_MultivectorType::get(context, obj.getActiveMask(), 
-        Float32Type::get(context), 
-        GeometricKindAttr::get(context, GeometricKind::Motor), 
-        obj.getSpace());
+        return obj.asMultivector();
     });
 
     addConversion([&](Cliff_ScalarType obj) {
-        return Cliff_MultivectorType::get(context, obj.getActiveMask(), 
-        Float32Type::get(context), 
-        GeometricKindAttr::get(context, GeometricKind::Scalar), 
-        obj.getSpace());
+       return obj.asMultivector();
     });
     
 }
