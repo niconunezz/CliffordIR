@@ -8,3 +8,13 @@ def GeometricTypeConversionPass : Pass<"geometric-type-conversion"> {
         "mlir::cliff::CliffDialect",
     ];
 }
+
+
+def RewriteExponentialPass : Pass<"rewrite-exponential"> {
+    let summary = "Rewrite exponential function to cliff.rotatate/cliff.translate";
+    let description = "";
+
+    let dependentDialects = [
+        "mlir::cliff::CliffDialect",
+    ];
+}

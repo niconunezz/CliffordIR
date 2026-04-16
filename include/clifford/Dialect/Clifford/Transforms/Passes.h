@@ -7,7 +7,7 @@
 
 namespace mlir::cliff {
     
-    #define GEN_PASS_DECL_GEOMETRICTYPECONVERSIONPASS
+    #define GEN_PASS_DECL
     #include "clifford/Dialect/Clifford/Transforms/CliffPasses.h.inc"
     
     #define GEN_PASS_REGISTRATION

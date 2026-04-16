@@ -130,6 +130,24 @@ def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
     let hasVerifier = 1;
 }
 
+def Cliff_Translate : Cliff_Op<"translate", [Pure]> {
+    let summary = "Translate a point";
+
+    let arguments = (ins Cliff_ScalarTensor:$dist, Cliff_LineOrPointTensor:$ref);
+    let results = (outs Cliff_MotorTensor:$out);
+
+    let assemblyFormat = "$ref `,` $dist attr-dict `:` type($ref) `*` type($dist) `->` type($out)";
+}
+
+def Cliff_Rotate : Cliff_Op<"rotate", [Pure]> {
+    let summary = "Rotate a point";
+
+    let arguments = (ins Cliff_ScalarTensor:$angle, Cliff_LineOrPointTensor:$ref);
+    let results = (outs Cliff_MotorTensor:$out);
+
+    let assemblyFormat = "$ref `,` $angle attr-dict `:` type($ref) `*` type($angle) `->` type($out)";
+}
+
 
 def Cliff_Vee : Cliff_Op<"vee", [Pure]> {
     let summary = "Compute the vee between two multivectors";
@@ -190,15 +208,12 @@ def Cliff_Dual : Cliff_Op<"dual", [Pure, SameOperandsAndResultType]> {
 }
 
 
-def Cliff_Exp : Cliff_Op<"exp", [Pure, SameOperandsAndResultType]> {
+def Cliff_Exp : Cliff_Op<"exp", [Pure]> {
     let summary = "Compute the exponential of a multivector";
 
     let arguments = (ins Cliff_MultivctTensor:$src);
     let results = (outs Cliff_MultivctTensor:$out);
-
-    let assemblyFormat = "$src attr-dict `:` type($out)";
-
-    // let hasVerifier = 1;
+    let assemblyFormat = "$src attr-dict `:` type($src) `->` type($out)";
 }
 
 
