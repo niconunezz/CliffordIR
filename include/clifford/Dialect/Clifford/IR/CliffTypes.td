@@ -3,8 +3,10 @@ include "mlir/IR/BuiltinTypeInterfaces.td"
 include "CliffDialect.td"
 include "CliffTypeInterfaces.td"
 
-
-class Cliff_Type<string name, string typeMnemonic, list<Trait> traits> : TypeDef<Cliff_Dialect, name, traits> {
+class Cliff_Type<string name, string typeMnemonic> : TypeDef<Cliff_Dialect, name> {
+    let mnemonic = typeMnemonic;
+}
+class Cliff_ObjType<string name, string typeMnemonic, list<Trait> traits> : TypeDef<Cliff_Dialect, name, traits> {
     let mnemonic = typeMnemonic;
 }
 
@@ -14,7 +16,7 @@ def Cliff_FloatTensor : RankedTensorOf<[Cliff_Float]>;
 def Cliff_FloatLike : AnyTypeOf<[Cliff_Float, Cliff_FloatTensor]>;
 
 
-def Cliff_Scalar : Cliff_Type<"Cliff_Scalar",
+def Cliff_Scalar : Cliff_ObjType<"Cliff_Scalar",
                                  "scalar", 
                                  [DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
     let summary = "A type that represents a Scalar object in the specified algebra";
@@ -28,7 +30,7 @@ def Cliff_Scalar : Cliff_Type<"Cliff_Scalar",
     let assemblyFormat = "`<` $space `>`";
 }
 
-def Cliff_Point : Cliff_Type<"Cliff_Point",
+def Cliff_Point : Cliff_ObjType<"Cliff_Point",
                                  "point", 
                                  [DeclareTypeInterfaceMethods<Cliff_GeometricElementInterface>,
                                   DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
@@ -44,7 +46,7 @@ def Cliff_Point : Cliff_Type<"Cliff_Point",
 
 }
 
-def Cliff_Line : Cliff_Type<"Cliff_Line",
+def Cliff_Line : Cliff_ObjType<"Cliff_Line",
                                  "line", 
                                  [DeclareTypeInterfaceMethods<Cliff_GeometricElementInterface>,
                                   DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
@@ -60,7 +62,8 @@ def Cliff_Line : Cliff_Type<"Cliff_Line",
 
 }
 
-def Cliff_Motor : Cliff_Type<"Cliff_Motor",
+
+def Cliff_Motor : Cliff_ObjType<"Cliff_Motor",
                                  "motor", 
                                  [DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
     let summary = "A type that represents a motor in the specified algebra";
@@ -77,8 +80,7 @@ def Cliff_Motor : Cliff_Type<"Cliff_Motor",
 
 
 def Cliff_Multivector : Cliff_Type<"Cliff_Multivector",
-                                   "multivector", 
-                                   [DeclareTypeInterfaceMethods<Cliff_GeometricObjectInterface>]> {
+                                   "multivector"> {
     let summary = "A type for representing objects in cliffords algebra";
     let description = [{
         The `Multivector` type allows you to represent numbers of the cliffords
@@ -91,6 +93,10 @@ def Cliff_Multivector : Cliff_Type<"Cliff_Multivector",
                       "CliffordAlgebraAttr" : $space);
 
     let assemblyFormat = "`<` $mask `,` $kind `,` $dtype `,` $space `>`";
+
+    let extraClassDeclaration = [{
+        uint32_t getDegree() const;
+    }];
 }
 
 def Cliff_GeometricKind : AnyTypeOf<[Cliff_Multivector, Cliff_Point, Cliff_Scalar, Cliff_Line, Cliff_Motor]>;
