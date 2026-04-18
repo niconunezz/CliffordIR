@@ -99,6 +99,25 @@ LogicalResult GeoProd::verify() {
     return success();
 }
 
+LogicalResult Rotate::verify() {
+    auto refTensorTy = dyn_cast<RankedTensorType>(getRef().getType());
+    auto angleTensorTy = dyn_cast<RankedTensorType>(getAngle().getType());
+    if (!refTensorTy || angleTensorTy)
+        return failure();
+    auto refTy = dyn_cast<Cliff_GeometricElementInterface>(refTensorTy.getElementType());
+    auto angleTy = dyn_cast<Cliff_ScalarType>(refTensorTy.getElementType());
+
+    if (!refTy || !angleTy)
+        return failure();
+
+    if (!refTy.isNormalized())
+        return emitError("Rotate operation only support normalized objects");
+
+    
+    return success();
+
+}
+
 LogicalResult Add::verify() {
     auto lhsTensorTy = dyn_cast<RankedTensorType>(getLhs().getType());
     auto rhsTensorTy = cast<RankedTensorType>(getRhs().getType());

@@ -146,6 +146,7 @@ def Cliff_Rotate : Cliff_Op<"rotate", [Pure]> {
     let results = (outs Cliff_MotorTensor:$out);
 
     let assemblyFormat = "$ref `,` $angle attr-dict `:` type($ref) `*` type($angle) `->` type($out)";
+    let hasVerifier = 1;
 }
 
 
