@@ -27,7 +27,6 @@ public:
     LogicalResult matchAndRewrite(Exp op, PatternRewriter &rewriter) const override {
         LLVM_DEBUG(llvm::dbgs() << "[RewriteExp] Trying to match: " << op << "\n");
 
-        auto loc = op.getLoc();
         RankedTensorType srcTensor = dyn_cast<RankedTensorType>(op.getSrc().getType());
         RankedTensorType outTensor = dyn_cast<RankedTensorType>(op.getResult().getType());
 
@@ -46,10 +45,6 @@ public:
         auto space = dyn_cast<CliffordAlgebraAttr>(srcMultivector.getAlgebra());
         auto p = space.getP(), q = space.getQ(), r = space.getR();
         LLVM_DEBUG(llvm::dbgs() << "[RewriteExp] Algebra: p=" << p << " q=" << q << " r=" << r << "\n");
-
-        uint64_t srcMask = srcMultivector.getMask();
-        
-        auto degree = srcMask == 0 ? 0 : 64 - __builtin_clzll(srcMask);
         
         if (q != 0 || r != 1 || (p < 1))
             return rewriter.notifyMatchFailure(op, "This pass only supports PGA");
