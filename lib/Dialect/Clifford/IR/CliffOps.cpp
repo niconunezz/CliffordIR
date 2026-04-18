@@ -100,14 +100,23 @@ LogicalResult GeoProd::verify() {
 }
 
 LogicalResult Add::verify() {
-    auto lhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
-    auto lhsMask = cast<Cliff_MultivectorType>(lhsTy).getMask();
+    auto lhsTensorTy = dyn_cast<RankedTensorType>(getLhs().getType());
+    auto rhsTensorTy = cast<RankedTensorType>(getRhs().getType());
+    auto outTensorTy = cast<RankedTensorType>(getOut().getType());
 
-    auto rhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
-    auto rhsMask = cast<Cliff_MultivectorType>(rhsTy).getMask();
+    if (!lhsTensorTy || !rhsTensorTy || !outTensorTy)
+        return failure();
+    
+    auto lhsTy = dyn_cast<Cliff_MultivectorType>(lhsTensorTy.getElementType());
+    auto rhsTy = dyn_cast<Cliff_MultivectorType>(rhsTensorTy.getElementType());
+    auto outTy = dyn_cast<Cliff_MultivectorType>(outTensorTy.getElementType());
 
-    auto outTy = cast<RankedTensorType>(getOut().getType()).getElementType();
-    auto outMask = cast<Cliff_MultivectorType>(outTy).getMask();
+    if (!lhsTy || !rhsTy || !outTy)
+        return failure();    
+
+    auto lhsMask = lhsTy.getMask();
+    auto rhsMask = rhsTy.getMask();
+    auto outMask = outTy.getMask();
 
     if ((lhsMask | rhsMask) != outMask) 
         return emitError("Mask out should be or(maskLHS, maskRHS) but isnt");
@@ -116,14 +125,23 @@ LogicalResult Add::verify() {
 }
 
 LogicalResult Sub::verify() {
-    auto lhsTy = dyn_cast<RankedTensorType>(getLhs().getType()).getElementType();
-    auto lhsMask = cast<Cliff_MultivectorType>(lhsTy).getMask();
+    auto lhsTensorTy = dyn_cast<RankedTensorType>(getLhs().getType());
+    auto rhsTensorTy = cast<RankedTensorType>(getRhs().getType());
+    auto outTensorTy = cast<RankedTensorType>(getOut().getType());
 
-    auto rhsTy = cast<RankedTensorType>(getRhs().getType()).getElementType();
-    auto rhsMask = cast<Cliff_MultivectorType>(rhsTy).getMask();
+    if (!lhsTensorTy || !rhsTensorTy || !outTensorTy)
+        return failure();
+    
+    auto lhsTy = dyn_cast<Cliff_MultivectorType>(lhsTensorTy.getElementType());
+    auto rhsTy = dyn_cast<Cliff_MultivectorType>(rhsTensorTy.getElementType());
+    auto outTy = dyn_cast<Cliff_MultivectorType>(outTensorTy.getElementType());
 
-    auto outTy = cast<RankedTensorType>(getOut().getType()).getElementType();
-    auto outMask = cast<Cliff_MultivectorType>(outTy).getMask();
+    if (!lhsTy || !rhsTy || !outTy)
+        return failure();    
+
+    auto lhsMask = lhsTy.getMask();
+    auto rhsMask = rhsTy.getMask();
+    auto outMask = outTy.getMask();
 
     if ((lhsMask | rhsMask) != outMask) 
         return emitError("Mask out should be or(maskLHS, maskRHS) but isnt");
