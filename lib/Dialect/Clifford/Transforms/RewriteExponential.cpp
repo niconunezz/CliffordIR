@@ -86,12 +86,18 @@ public:
 
             if (geoObject.getObjectKind().getValue() == ObjectKind::Euclidean) {
                 LLVM_DEBUG(llvm::dbgs() << "[RewriteExp] -> Rotate (Euclidean referenceLocus)\n");
+                bool hasOneUse = geoProd.getResult().hasOneUse();
                 rewriter.replaceOpWithNewOp<Rotate>(op, outTensor, geoProd.getLhs(), geoProd.getRhs());
+                if (hasOneUse)
+                    rewriter.eraseOp(geoProd);
                 return success();
             }
             if (geoObject.getObjectKind().getValue() == ObjectKind::Ideal) {
                 LLVM_DEBUG(llvm::dbgs() << "[RewriteExp] -> Translate (Ideal referenceLocus)\n");
+                bool hasOneUse = geoProd.getResult().hasOneUse();
                 rewriter.replaceOpWithNewOp<Translate>(op, outTensor, geoProd.getLhs(), geoProd.getRhs());
+                if (hasOneUse)
+                    rewriter.eraseOp(geoProd);
                 return success();
             }
         }

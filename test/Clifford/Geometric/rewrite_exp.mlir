@@ -3,7 +3,7 @@
 // -----
 
 // CHECK-LABEL: cliff.func @rotation2D
-// CHECK:   cliff.geo_prod
+// CHECK-NOT:   cliff.geo_prod
 // CHECK:       cliff.rotate
 // CHECK-NOT:   cliff.exp
 #space = #cliff.algebra<{p=2, q=0, r=1}>
@@ -21,7 +21,7 @@ cliff.func @rotation2D(%arg0 : tensor<64x!cliff.point<euclidean, true, #space>>,
 // -----
 
 // CHECK-LABEL: cliff.func @translation2D
-// CHECK:   cliff.geo_prod
+// CHECK-NOT:   cliff.geo_prod
 // CHECK:       cliff.translate
 // CHECK-NOT:   cliff.exp
 #space = #cliff.algebra<{p=2, q=0, r=1}>
@@ -38,8 +38,31 @@ cliff.func @translation2D(%arg0 : tensor<64x!cliff.point<ideal, true, #space>>,
 
 // -----
 
+// CHECK-LABEL: cliff.func @translation2D_with_reuse
+// CHECK:       cliff.geo_prod
+// CHECK:       cliff.translate
+// CHECK:       cliff.sandwich
+// CHECK-NOT:   cliff.exp
+#space = #cliff.algebra<{p=2, q=0, r=1}>
+cliff.func @translation2D_with_reuse(%arg0 : tensor<64x!cliff.point<ideal, true, #space>>, 
+                    %time : tensor<64x32x!cliff.scalar<#space>>) -> tensor<64x32x!cliff.motor<true, #space>> {
+    
+    %tmp = cliff.geo_prod %time, %arg0 : tensor<64x32x!cliff.scalar<#space>> * 
+        tensor<64x!cliff.point<ideal, true, #space>> -> tensor<64x32x!cliff.point<ideal, true, #space>>
+
+    %motor = cliff.exp %tmp : tensor<64x32x!cliff.point<ideal, true, #space>> -> tensor<64x32x!cliff.motor<true, #space>>
+
+    %out = cliff.sandwich %motor, %tmp : tensor<64x32x!cliff.motor<true, #space>> *
+                                         tensor<64x32x!cliff.point<ideal, true, #space>> -> 
+                                         tensor<64x32x!cliff.point<ideal, true, #space>>
+
+    cliff.ret %out : tensor<64x32x!cliff.point<ideal, true, #space>>
+}
+
+// -----
+
 // CHECK-LABEL: cliff.func @rotation3D
-// CHECK:   cliff.geo_prod
+// CHECK-NOT:   cliff.geo_prod
 // CHECK:       cliff.rotate
 // CHECK-NOT:   cliff.exp
 #space = #cliff.algebra<{p=3, q=0, r=1}>
@@ -57,7 +80,7 @@ cliff.func @rotation3D(%arg0 : tensor<64x!cliff.line<euclidean, true, #space>>,
 // -----
 
 // CHECK-LABEL: cliff.func @translation3D
-// CHECK:   cliff.geo_prod
+// CHECK-NOT:   cliff.geo_prod
 // CHECK:       cliff.translate
 // CHECK-NOT:   cliff.exp
 #space = #cliff.algebra<{p=3, q=0, r=1}>
