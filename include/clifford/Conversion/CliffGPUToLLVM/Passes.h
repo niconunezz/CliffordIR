@@ -2,7 +2,6 @@
 #define CLIFFORD_CONVERSION_CLIFFGPUTOLLVM_PASSES_H
 
 #include "mlir/Pass/Pass.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
