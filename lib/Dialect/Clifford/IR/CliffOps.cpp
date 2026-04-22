@@ -31,9 +31,9 @@ LogicalResult GeoProd::verify() {
 
     unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
 
-    const uint64_t lhsMask = lhsTy.getMask();
-    const uint64_t rhsMask = rhsTy.getMask();
-    const uint64_t outMask = outTy.getMask();
+    const uint64_t lhsMask = lhsTy.getActiveMask();
+    const uint64_t rhsMask = rhsTy.getActiveMask();
+    const uint64_t outMask = outTy.getActiveMask();
     
     uint64_t lhsMaskCopy = lhsMask;
     uint64_t rhsMaskCopy = rhsMask;
@@ -72,26 +72,7 @@ LogicalResult GeoProd::verify() {
     if ((lhsMask & 1 == 0) || (rhsMask & 1 == 0))
         return emitError("lhsMask and rhsMask last bit should be always one!");
     
-
-    int64_t resultMask = 0;
-    while (lhsMaskCopy) {
-        int lhsIndex = __builtin_ctz(lhsMaskCopy);
-        int rhsMaskIter = rhsMaskCopy;
-        while (rhsMaskIter) {
-            int rhsIndex = __builtin_ctz(rhsMaskIter);
-
-            int newBasis = lhsIndex ^ rhsIndex;
-            int newSign = metricSign(lhsIndex, rhsIndex, p, q, r);
-
-            if (newSign != 0) {
-                resultMask |= (1ULL << newBasis);
-            }
-            
-            rhsMaskIter &= (rhsMaskIter - 1);
-        }
-        lhsMaskCopy &= (lhsMaskCopy - 1);
-    }
-
+    uint64_t resultMask = getResultMask(lhsMaskCopy, rhsMaskCopy, p, q, r);
     
     if (resultMask != outMask) 
         return emitError("The mask of the result is ") << outMask << " when it should be " << resultMask;
@@ -100,18 +81,18 @@ LogicalResult GeoProd::verify() {
 }
 
 LogicalResult Rotate::verify() {
-    auto refTensorTy = dyn_cast<RankedTensorType>(getRef().getType());
-    auto angleTensorTy = dyn_cast<RankedTensorType>(getAngle().getType());
-    if (!refTensorTy || angleTensorTy)
-        return failure();
-    auto refTy = dyn_cast<Cliff_GeometricElementInterface>(refTensorTy.getElementType());
-    auto angleTy = dyn_cast<Cliff_ScalarType>(refTensorTy.getElementType());
+    // auto refTensorTy = dyn_cast<RankedTensorType>(getSrc().getType());
+    // auto angleTensorTy = dyn_cast<RankedTensorType>(getAngle().getType());
+    // if (!refTensorTy || angleTensorTy)
+    //     return failure();
+    // auto refTy = dyn_cast<Cliff_GeometricElementInterface>(refTensorTy.getElementType());
+    // auto angleTy = dyn_cast<Cliff_ScalarType>(refTensorTy.getElementType());
 
-    if (!refTy || !angleTy)
-        return failure();
+    // if (!refTy || !angleTy)
+    //     return failure();
 
-    if (!refTy.isNormalized())
-        return emitError("Rotate operation only support normalized objects");
+    // if (!refTy.isNormalized())
+    //     return emitError("Rotate operation only support normalized objects");
 
     
     return success();

@@ -9,7 +9,7 @@ def Cliff_AlgebraicElementInterface : TypeInterface<"Cliff_AlgebraicElementInter
         InterfaceMethod<
             /*desc=*/"Get active basis mask.",
             /*retType=*/"uint64_t",
-            /*methodName=*/"getMask">,
+            /*methodName=*/"getActiveMask">,
         InterfaceMethod<
             /*desc=*/"Get space.",
             /*retType=*/"mlir::cliff::CliffordAlgebraAttr",

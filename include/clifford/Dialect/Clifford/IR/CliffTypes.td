@@ -94,8 +94,9 @@ def Cliff_Motor : Cliff_ObjType<"Cliff_Motor",
 }
 
 
-def Cliff_Multivector : Cliff_Type<"Cliff_Multivector",
-                                   "multivector"> {
+def Cliff_Multivector : Cliff_ObjType<"Cliff_Multivector",
+                                   "multivector",
+                                   [DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
     let summary = "A type for representing objects in cliffords algebra";
     let description = [{
         The `Multivector` type allows you to represent numbers of the cliffords
