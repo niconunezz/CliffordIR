@@ -40,7 +40,7 @@ def Cliff_GeometricElementInterface : TypeInterface<"Cliff_GeometricElementInter
             /*methodName=*/"getObjectKind",
             /*args=*/(ins), [{}], [{
                 return $_type.getKind();
-            }]>
+            }]>,
         
         InterfaceMethod<
             /*desc=*/"Get normalized status",
