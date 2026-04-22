@@ -41,8 +41,6 @@ bool checkWithGospersHack(int k, int n, uint64_t mask) {
 }
 
 
-
-
 uint32_t Cliff_MultivectorType::getDegree() const {
     // This method aims to find the degree of the multivector. This isnt trivial
     // as we only have an unordered mask. The main idea is iterating through every
@@ -67,11 +65,12 @@ uint32_t Cliff_MultivectorType::getDegree() const {
     return 0;
 }
 
+uint64_t Cliff_MultivectorType::getActiveMask() const { return getMask(); }
 
-uint64_t Cliff_ScalarType::getMask() const { return 1; }
+uint64_t Cliff_ScalarType::getActiveMask() const { return 1; }
 
 //todo : generalize to more than PG2D and PG3D if neccesary
-uint64_t Cliff_PointType::getMask() const {
+uint64_t Cliff_PointType::getActiveMask() const {
     
     auto space = getSpace();
     assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGA algebras");
@@ -80,7 +79,7 @@ uint64_t Cliff_PointType::getMask() const {
     return fillWithGospersHack(n, n+1);
 }
 
-uint64_t Cliff_LineType::getMask() const {
+uint64_t Cliff_LineType::getActiveMask() const {
     auto space = getSpace();
     assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGA algebras");
 
@@ -88,32 +87,37 @@ uint64_t Cliff_LineType::getMask() const {
     return fillWithGospersHack(n-1, n+1);
 }
 
-//todo
-uint64_t Cliff_MotorType::getMask() const { return 1; }
+uint64_t Cliff_MotorType::getActiveMask() const { 
+    auto space = getSpace();
+    assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGA algebras");
+    int n = space.getP();
+    // motors are always scalar + bivector
+    return fillWithGospersHack(2, n+1);
+}
 
-
+Type Cliff_MultivectorType::asMultivector() const { return Type(*this); }
 
 Type Cliff_PointType::asMultivector() const {
-    auto mask = getMask();
+    auto mask = getActiveMask();
     return Cliff_MultivectorType::get(getContext(), mask,
         Float32Type::get(getContext()), 
         GeometricKindAttr::get(getContext(), GeometricKind::Point), 
         getSpace());
 }
 Type Cliff_LineType::asMultivector() const { 
-    return Cliff_MultivectorType::get(getContext(), getMask(),
+    return Cliff_MultivectorType::get(getContext(), getActiveMask(),
         Float32Type::get(getContext()), 
         GeometricKindAttr::get(getContext(), GeometricKind::Line), 
         getSpace());
 }
 Type Cliff_MotorType::asMultivector() const { 
-    return Cliff_MultivectorType::get(getContext(), getMask(),
+    return Cliff_MultivectorType::get(getContext(), getActiveMask(),
         Float32Type::get(getContext()), 
         GeometricKindAttr::get(getContext(), GeometricKind::Motor), 
         getSpace());
 }
 Type Cliff_ScalarType::asMultivector() const { 
-    return Cliff_MultivectorType::get(getContext(), getMask(),
+    return Cliff_MultivectorType::get(getContext(), getActiveMask(),
         Float32Type::get(getContext()), 
         GeometricKindAttr::get(getContext(), GeometricKind::Scalar), 
         getSpace());
