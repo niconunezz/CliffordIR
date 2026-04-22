@@ -28,6 +28,7 @@ namespace mlir::cliff{
 
 
 
+
 void FuncOp::print(OpAsmPrinter &p) {
     function_interface_impl::printFunctionOp(
         p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
@@ -115,6 +116,29 @@ struct CliffOpAsmDialectInterface : public OpAsmDialectInterface {
         return AliasResult::NoAlias;
     }
 };
+
+
+uint64_t getResultMask(uint64_t lhsMask, uint64_t  rhsMask, unsigned p, unsigned q, unsigned r) {
+        uint64_t resultMask = 0;
+        while (lhsMask) {
+            uint64_t lhsIndex = __builtin_ctz(lhsMask);
+            uint64_t rhsMaskIter = rhsMask;
+            while (rhsMaskIter) {
+                uint64_t rhsIndex = __builtin_ctz(rhsMaskIter);
+
+                uint64_t newBasis = lhsIndex ^ rhsIndex;
+                uint64_t newSign = metricSign(lhsIndex, rhsIndex, p, q, r);
+
+                if (newSign != 0)
+                    resultMask |= (1ULL << newBasis);
+                
+                rhsMaskIter &= (rhsMaskIter - 1);
+            }
+            lhsMask &= (lhsMask - 1);
+            
+        }
+    return resultMask;
+}
 
 
     int reorderSign(uint64_t a, uint64_t b) {
