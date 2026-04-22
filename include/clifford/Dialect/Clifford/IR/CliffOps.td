@@ -133,19 +133,19 @@ def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
 def Cliff_Translate : Cliff_Op<"translate", [Pure]> {
     let summary = "Translate a point";
 
-    let arguments = (ins Cliff_ScalarTensor:$dist, Cliff_LineOrPointTensor:$ref);
+    let arguments = (ins Cliff_ScalarTensor:$dist, Cliff_LineOrPointTensor:$src);
     let results = (outs Cliff_MotorTensor:$out);
 
-    let assemblyFormat = "$ref `,` $dist attr-dict `:` type($ref) `*` type($dist) `->` type($out)";
+    let assemblyFormat = "$src `,` $dist attr-dict `:` type($src) `*` type($dist) `->` type($out)";
 }
 
 def Cliff_Rotate : Cliff_Op<"rotate", [Pure]> {
     let summary = "Rotate a point";
 
-    let arguments = (ins Cliff_ScalarTensor:$angle, Cliff_LineOrPointTensor:$ref);
+    let arguments = (ins Cliff_ScalarTensor:$angle, Cliff_LineOrPointTensor:$src);
     let results = (outs Cliff_MotorTensor:$out);
 
-    let assemblyFormat = "$ref `,` $angle attr-dict `:` type($ref) `*` type($angle) `->` type($out)";
+    let assemblyFormat = "$src `,` $angle attr-dict `:` type($src) `*` type($angle) `->` type($out)";
     let hasVerifier = 1;
 }
 
@@ -182,6 +182,17 @@ def Cliff_Dot : Cliff_Op<"dot", [Pure]> {
 
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
 
+
+    // let hasVerifier = 1;
+}
+
+def Cliff_Reverse : Cliff_Op<"reverse", [Pure]> {
+    let summary = "Compute the reverse of a multivector";
+
+    let arguments = (ins Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$src attr-dict `:` type($src) `->` type($out)";
 
     // let hasVerifier = 1;
 }
