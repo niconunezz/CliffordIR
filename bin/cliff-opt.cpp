@@ -17,9 +17,8 @@ int main(int argc, char **argv) {
 
     registerAllDialects(registry);
     mlir::cliff::registerConvertCliffToCliffGPUPass();
-    mlir::cliff::registerGeometricTypeConversionPass();
-    mlir::cliff::registerRewriteExponentialPass();
 
+    mlir::cliff::registerPassesPasses();
     
     mlir::clg::registerConvertCliffGPUToLLVMPass();
 
