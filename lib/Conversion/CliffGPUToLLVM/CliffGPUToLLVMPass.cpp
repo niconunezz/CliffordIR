@@ -5,9 +5,8 @@
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
 
 #include "clifford/Dialect/CliffGPU/IR/Dialect.h"
+#include "clifford/Conversion/CliffGPUToLLVM/Utility.h"
 
-
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "clifford/Conversion/CliffGPUToLLVM/Passes.h"
 #include "clifford/Conversion/CliffGPUToLLVM/TypeConverter.h"
 
@@ -148,7 +147,60 @@ public:
         rewriter.replaceOp(op, result);
         return success();
     }
+};
 
+class CliffReverseOpPattern : public OpConversionPattern<Reverse> {
+public:
+    using OpConversionPattern::OpConversionPattern;
+    LogicalResult matchAndRewrite(Reverse op, Reverse::Adaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+        Location loc = op.getLoc();
+        auto converter = getTypeConverter();
+
+        RankedTensorType srcTensor = dyn_cast<RankedTensorType>(op.getSrc().getType());
+        RankedTensorType outTensor = dyn_cast<RankedTensorType>(op.getOut().getType());
+
+        Cliff_MultivectorType srcMv = dyn_cast<Cliff_MultivectorType>(srcTensor.getElementType());
+        
+        const auto mask = srcMv.getMask();
+        auto maskCopy = mask;
+        auto space = srcMv.getSpace();
+        SmallVector<bool> mustNegate;
+        while (maskCopy)
+        {
+            auto grade = __builtin_popcountll(__builtin_ctz(maskCopy));
+            int exponent = (grade * (grade - 1)) / 2;
+            mustNegate.push_back((exponent % 2) != 0);
+            maskCopy &= (maskCopy-1);
+        }
+        
+        auto adaptorSrc = adaptor.getSrc();
+        auto srcMultivectors = unpackElements(loc, adaptorSrc, rewriter);
+
+        SmallVector<Type> newResultTypes;
+        if (failed(converter->convertTypes(outTensor, newResultTypes)))
+            return rewriter.notifyMatchFailure(op, "failed to convert return type");
+
+        assert(newResultTypes.size() == 1 && "GeoProd should return exactly 1 argument");
+        
+        Type returnType = newResultTypes[0];
+        auto b = CliffordLLVMOpBuilder(loc, rewriter);
+        SmallVector<Value> reversedMvs;
+        for (auto &mv : srcMultivectors) {
+            SmallVector<Value> reversedCoeffs;
+            auto coeffs = unpackElements(loc, mv, rewriter);
+            for (auto [neg, coeff] : llvm::zip(mustNegate, coeffs)) {
+                auto newMv = neg ? b.neg(coeff) : coeff;
+                reversedCoeffs.push_back(newMv);
+            }
+            
+            Value coeffsStruct = packElements(loc, reversedCoeffs, converter, rewriter, srcMv);
+            reversedMvs.push_back(coeffsStruct);
+        }
+
+        Value result = packElements(loc, reversedMvs, converter, rewriter, srcTensor);
+        rewriter.replaceOp(op, result);
+        return success();
+    }
 };
 
 class CliffReturnOpPattern : public OpConversionPattern<ReturnOp> {
@@ -247,7 +299,11 @@ public:
 
 void populateCliffGPUToLLVMPatterns(TypeConverter &typeConverter, RewritePatternSet &patterns) {
     MLIRContext* context = patterns.getContext();
-    patterns.insert<CliffReturnOpPattern, CliffFuncOpPattern, CliffGeoProdOpPattern>(typeConverter, context);
+    patterns.insert<CliffReturnOpPattern, 
+                    CliffFuncOpPattern, 
+                    CliffGeoProdOpPattern,
+                    CliffReverseOpPattern
+                    >(typeConverter, context);
 }
 
 
