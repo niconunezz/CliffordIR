@@ -1,6 +1,9 @@
 #ifndef CLIFFORD_DIALECT_CLIFFORD_TRANSFORMS_PASSES_H
 #define CLIFFORD_DIALECT_CLIFFORD_TRANSFORMS_PASSES_H
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"

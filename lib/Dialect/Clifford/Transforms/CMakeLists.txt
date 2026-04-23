@@ -1,7 +1,9 @@
 add_clifford_library(CliffordPasses
     GeometricTypeConversion.cpp
     RewriteExponential.cpp
-    
+    RewriteSandwich.cpp
+
+
     DEPENDS
     CliffPassesPassIncGen
 

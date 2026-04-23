@@ -18,3 +18,12 @@ def RewriteExponentialPass : Pass<"rewrite-exponential"> {
         "mlir::cliff::CliffDialect",
     ];
 }
+
+def RewriteSandwichPass : Pass<"rewrite-sandwich"> {
+    let summary = "Rewrite sandwich function to cliff.rotatate/cliff.translate";
+    let description = "";
+
+    let dependentDialects = [
+        "mlir::cliff::CliffDialect",
+    ];
+}
