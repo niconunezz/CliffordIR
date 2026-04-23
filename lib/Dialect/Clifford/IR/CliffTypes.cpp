@@ -11,35 +11,18 @@
 using namespace mlir;
 using namespace mlir::cliff;
 
-uint64_t fillWithGospersHack(int k, int n) {
 
-    int set = (1 << k) - 1;
-    int limit = (1 << n);
-    uint64_t ret = 1;
-    while (set < limit) {
 
-        ret |= (1ULL << set);
-        int c = set & -set;
-        int r = set + c;
-        set = (((r ^ set) >> 2) / c) | r;
-    }
 
-    return ret;
-}
-bool checkWithGospersHack(int k, int n, uint64_t mask) {
-    uint32_t set = (1u << k) - 1;
-    uint32_t limit = (1u << n);
-    while (set < limit) {
-        if (mask & (1ULL << set)) return true;
-
-        uint32_t c = set & -set;
-        uint32_t r = set + c;
-        set = (((r ^ set) >> 2) / c) | r;
-    }
-
-    return false;
-}
-
+/// This method aims to find the degree of the multivector. This isnt trivial
+/// as we only have an unordered mask. The main idea is iterating through every
+/// basis in order, for example, for PGA2D this would be
+/// 111 -> 110-> 101 -> 011 -> 100 -> 010 -> 001
+/// We can separate in 111, 110-> 101 -> 011 and 100 -> 010 -> 001, this is, for every degree k,
+/// we need all the combinations of k bits in n possible possitions.
+/// This sets can be obtained by Gosper's Hack, so that is what we will be doing.
+/// Next resource can be very helpful to get an intuition
+/// http://programmingforinsomniacs.blogspot.com/2018/03/gospers-hack-explained.html
 
 uint32_t Cliff_MultivectorType::getDegree() const {
     // This method aims to find the degree of the multivector. This isnt trivial

@@ -118,6 +118,40 @@ struct CliffOpAsmDialectInterface : public OpAsmDialectInterface {
 };
 
 
+SmallVector<uint64_t> getIndicesForGrade(int grade, int numDims) {
+
+    int set = (1 << grade) - 1;
+    int limit = (1 << numDims);
+    SmallVector<uint64_t> indices;
+    while (set < limit) {
+        indices.push_back(set);
+        int c = set & -set;
+        int r = set + c;
+        set = (((r ^ set) >> 2) / c) | r;
+    }
+    return indices;
+}
+
+uint64_t fillWithGospersHack(int k, int n) {
+
+    SmallVector<uint64_t> indices =  getIndicesForGrade(k, n);
+    uint64_t ret = 1;
+    for (const auto set : indices)
+        ret |= (1ULL << set);
+
+    return ret;
+}
+
+bool checkWithGospersHack(int k, int n, uint64_t mask) {
+    SmallVector<uint64_t> indices =  getIndicesForGrade(k, n);
+
+    for (const auto set : indices)
+        if (mask & (1ULL << set)) return true;
+    
+    return false;
+}
+
+
 uint64_t getResultMask(uint64_t lhsMask, uint64_t  rhsMask, unsigned p, unsigned q, unsigned r) {
         uint64_t resultMask = 0;
         while (lhsMask) {
@@ -138,6 +172,19 @@ uint64_t getResultMask(uint64_t lhsMask, uint64_t  rhsMask, unsigned p, unsigned
             
         }
     return resultMask;
+}
+
+uint32_t getDegree(uint64_t mask, CliffordAlgebraAttr space) {
+    
+    auto n = space.getP() + space.getQ() + space.getR();
+    
+    // pseudoscalar case
+    if ((1ULL << ((1u << n) - 1)) & mask) return n;
+    
+    for (int k = n-1; k > 0; --k) {
+        if (checkWithGospersHack(k, n, mask)) return k;
+    }
+    return 0;
 }
 
 
