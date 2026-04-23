@@ -1,5 +1,6 @@
 add_clifford_library(CliffGPUToLLVMPass
 
+    Utility.cpp
     CliffGPUToLLVMPass.cpp
     TypeConverter.cpp
     # CliffGPUConversion.cpp

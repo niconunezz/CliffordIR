@@ -26,13 +26,30 @@ namespace mlir::clg {
             return LLVM::InsertValueOp::create(*builder, loc, std::forward<Args>(args)...);
         }
 
+        template <typename... Args> LLVM::FNegOp neg(Args &&...args) {
+            return LLVM::FNegOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+
+        template <typename... Args> LLVM::FAddOp fadd(Args &&...args) {
+            return LLVM::FAddOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::MulOp mul(Args &&...args) {
+            return LLVM::MulOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::FMulOp fmul(Args &&...args) {
+            return LLVM::FMulOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::FMAOp fma(Args &&...args) {
+            return LLVM::FMAOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+
         Location loc;
         OpBuilder *builder;
     };
 
     SmallVector<Value> unpackElements(Location loc, Value llvmStruct, RewriterBase &rewriter);
     Value packElements(Location loc, ValueRange resultVals,
-                       const LLVMTypeConverter *typeConverter,
+                       const TypeConverter *typeConverter,
                        RewriterBase &rewriter, Type type);
 
 }
