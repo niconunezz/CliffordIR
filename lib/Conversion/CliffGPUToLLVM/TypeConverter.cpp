@@ -18,7 +18,8 @@ CliffGPUToLLVMTypeConverter::CliffGPUToLLVMTypeConverter(MLIRContext *ctx) : con
 
     addConversion([ctx](cliff::Cliff_MultivectorType mvector) {
         int numComponents = __builtin_popcountll(mvector.getMask());
-        return LLVM::LLVMArrayType::get(ctx, mvector.getDtype(), numComponents);
+        SmallVector<Type, 4> types(numComponents, mvector.getDtype());
+        return LLVM::LLVMStructType::getLiteral(ctx, types);
     });
 
     addConversion([&](RankedTensorType type) {
@@ -38,6 +39,7 @@ CliffGPUToLLVMConversionTarget::CliffGPUToLLVMConversionTarget(MLIRContext &ctx,
      const TypeConverter &typeConverter) : ConversionTarget(ctx) {
 
     addLegalOp<ModuleOp>();
+    addIllegalOp<cliff::Rotate, cliff::Translate>();
     addLegalDialect<mlir::LLVM::LLVMDialect, mlir::arith::ArithDialect, mlir::math::MathDialect>();
     addIllegalDialect<cliff::CliffDialect, clg::CliffGPUDialect>();
 
