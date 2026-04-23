@@ -25,15 +25,6 @@ using namespace mlir::cliff;
 /// http://programmingforinsomniacs.blogspot.com/2018/03/gospers-hack-explained.html
 
 uint32_t Cliff_MultivectorType::getDegree() const {
-    // This method aims to find the degree of the multivector. This isnt trivial
-    // as we only have an unordered mask. The main idea is iterating through every
-    // basis in order, for example, for PGA2D this would be
-    // 111 -> 110-> 101 -> 011 -> 100 -> 010 -> 001
-    // We can separate in 111, 110-> 101 -> 011 and 100 -> 010 -> 001, this is, for every degree k,
-    // we need all the combinations of k bits in n possible possitions.
-    // This sets can be obtained by Gosper's Hack, so that is what we will be doing.
-    // Next resource can be very helpful to get an intuition
-    // http://programmingforinsomniacs.blogspot.com/2018/03/gospers-hack-explained.html
     
     auto mask = getMask();
     auto space = getSpace();
