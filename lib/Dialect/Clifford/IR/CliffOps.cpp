@@ -69,7 +69,7 @@ LogicalResult GeoProd::verify() {
     // Note : The scalar case is kind of strange as 0...1 xor 0...1 = 0...0 but scalars dont dissappear,
     // for now we will force the scalar bit to be always 1 and assume there is always a scalar component. 
 
-    if ((lhsMask & 1 == 0) || (rhsMask & 1 == 0))
+    if (((lhsMask & 1) == 0) || ((rhsMask & 1)== 0))
         return emitError("lhsMask and rhsMask last bit should be always one!");
     
     uint64_t resultMask = getResultMask(lhsMaskCopy, rhsMaskCopy, p, q, r);
