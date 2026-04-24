@@ -15,6 +15,11 @@ def Cliff_Float : AnyTypeOf<[F8E4M3FN, F8E4M3FNUZ, F8E5M2, F8E5M2FNUZ, F16, BF16
 def Cliff_FloatTensor : RankedTensorOf<[Cliff_Float]>;
 def Cliff_FloatLike : AnyTypeOf<[Cliff_Float, Cliff_FloatTensor]>;
 
+def Cliff_Pointer : Cliff_Type<"Cliff_Pointer", "ptr"> {
+    let summary = "Pointer type";
+    let parameters = (ins "Type":$dtype);
+    let assemblyFormat = "`<` $dtype `>`";
+}
 
 def Cliff_Scalar : Cliff_ObjType<"Cliff_Scalar",
                                  "scalar", 
@@ -120,8 +125,11 @@ def Cliff_GeometricKind : AnyTypeOf<[Cliff_Multivector, Cliff_Point, Cliff_Scala
 def Cliff_LineOrPointTensor : RankedTensorOf<[Cliff_Point, Cliff_Line]>;
 def Cliff_ScalarTensor : RankedTensorOf<[Cliff_Scalar]>;
 def Cliff_MotorTensor : RankedTensorOf<[Cliff_Motor]>;
+def Cliff_PointerTensor : RankedTensorOf<[Cliff_Pointer]>;
 
 
-def Cliff_MultivctTensor : RankedTensorOf<[Cliff_GeometricKind]>;
+def Cliff_GeometricKindTensor : RankedTensorOf<[Cliff_GeometricKind]>;
+def Cliff_MultivctTensor : RankedTensorOf<[Cliff_Multivector]>;
 
-def Cliff_AnyType : AnyTypeOf<[Cliff_Multivector, Cliff_MultivctTensor, Cliff_FloatLike]>;
+
+def Cliff_AnyType : AnyTypeOf<[Cliff_Multivector, Cliff_GeometricKindTensor, Cliff_FloatLike]>;

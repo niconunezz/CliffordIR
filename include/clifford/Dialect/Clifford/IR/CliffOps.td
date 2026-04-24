@@ -16,6 +16,19 @@ class Cliff_Op<string mnemonic, list<Trait> traits = []> :
     }
 
 
+def Cliff_LoadOp : Cliff_Op<"load", []> {
+    let summary = "Load a tensor from a pointer";
+    let arguments = (ins Cliff_Pointer:$ptr);
+    let results = (outs Cliff_GeometricKindTensor:$value);
+    let assemblyFormat = "$ptr attr-dict `:` type($ptr) `->` type($value)";
+}
+
+def Cliff_StoreOp : Cliff_Op<"store", []> {
+    let summary = "Load a tensor from a pointer";
+    let arguments = (ins Cliff_PointerTensor:$ptr, Cliff_GeometricKindTensor:$value);
+    let assemblyFormat = "$ptr `,` $value attr-dict `:` type($ptr) `,` type($value)";
+}
+
 
 def Cliff_FuncOp : Cliff_Op<"func", [FunctionOpInterface,
                                    IsolatedFromAbove,
@@ -86,8 +99,8 @@ def Cliff_ReturnOp : Cliff_Op<"ret", [Pure, HasParent<"FuncOp">, MemRefsNormaliz
 def Cliff_Add : Cliff_Op<"add", [Pure]> {
     let summary = "Compute the addition between two multivectors";
 
-    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `+` type($rhs) `->` type($out)";
@@ -98,8 +111,8 @@ def Cliff_Add : Cliff_Op<"add", [Pure]> {
 def Cliff_Sub : Cliff_Op<"sub", [Pure, ]> {
     let summary = "Compute the substraction between two multivectors";
 
-    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `+` type($rhs) `->` type($out)";
 
@@ -111,7 +124,7 @@ def Cliff_Constant : Cliff_Op<"constant", [ConstantLike, Pure, AllTypesMatch<["v
 
     //TODO : make this fp
     let arguments = (ins AnyIntElementsAttr :$value);
-    let results = (outs Cliff_MultivctTensor:$result);
+    let results = (outs Cliff_GeometricKindTensor:$result);
 
     let assemblyFormat = "$value attr-dict `:` type($result) ";
     // let hasVerifier = 1;
@@ -121,8 +134,8 @@ def Cliff_Constant : Cliff_Op<"constant", [ConstantLike, Pure, AllTypesMatch<["v
 def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
     let summary = "Compute the geometric product between two multivectors";
 
-    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
@@ -153,8 +166,8 @@ def Cliff_Rotate : Cliff_Op<"rotate", [Pure]> {
 def Cliff_Vee : Cliff_Op<"vee", [Pure]> {
     let summary = "Compute the vee between two multivectors";
 
-    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
@@ -166,8 +179,8 @@ def Cliff_Vee : Cliff_Op<"vee", [Pure]> {
 def Cliff_Wedge : Cliff_Op<"wedge", [Pure]> {
     let summary = "Compute the wedge between two multivectors";
 
-    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
 
@@ -177,8 +190,8 @@ def Cliff_Wedge : Cliff_Op<"wedge", [Pure]> {
 def Cliff_Dot : Cliff_Op<"dot", [Pure]> {
     let summary = "Compute the dot between two multivectors";
 
-    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
 
@@ -189,8 +202,8 @@ def Cliff_Dot : Cliff_Op<"dot", [Pure]> {
 def Cliff_Reverse : Cliff_Op<"reverse", [Pure]> {
     let summary = "Compute the reverse of a multivector";
 
-    let arguments = (ins Cliff_MultivctTensor:$src);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$src);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$src attr-dict `:` type($src) `->` type($out)";
 
@@ -200,8 +213,8 @@ def Cliff_Reverse : Cliff_Op<"reverse", [Pure]> {
 def Cliff_Sandwich : Cliff_Op<"sandwich", [Pure]> {
     let summary = "Compute the sandwich between two multivectors";
 
-    let arguments = (ins Cliff_MultivctTensor:$lhs, Cliff_MultivctTensor:$rhs);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
 
@@ -211,8 +224,8 @@ def Cliff_Sandwich : Cliff_Op<"sandwich", [Pure]> {
 def Cliff_Dual : Cliff_Op<"dual", [Pure, SameOperandsAndResultType]> {
     let summary = "Compute the dual of a multivector";
 
-    let arguments = (ins Cliff_MultivctTensor:$src);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$src);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$src attr-dict `:` type($out)";
 
@@ -223,8 +236,8 @@ def Cliff_Dual : Cliff_Op<"dual", [Pure, SameOperandsAndResultType]> {
 def Cliff_Exp : Cliff_Op<"exp", [Pure]> {
     let summary = "Compute the exponential of a multivector";
 
-    let arguments = (ins Cliff_MultivctTensor:$src);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$src);
+    let results = (outs Cliff_GeometricKindTensor:$out);
     let assemblyFormat = "$src attr-dict `:` type($src) `->` type($out)";
 }
 
@@ -232,8 +245,8 @@ def Cliff_Exp : Cliff_Op<"exp", [Pure]> {
 def Cliff_Normalize : Cliff_Op<"normalize", [Pure, SameOperandsAndResultType]> {
     let summary = "Normalize a multivector";
 
-    let arguments = (ins Cliff_MultivctTensor:$src);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$src);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$src attr-dict `:` type($out)";
 
@@ -245,8 +258,8 @@ def Cliff_Normalize : Cliff_Op<"normalize", [Pure, SameOperandsAndResultType]> {
 def Cliff_Sign : Cliff_Op<"sign", [Pure, SameOperandsAndResultType]> {
     let summary = "Obtain a multivectors sign";
 
-    let arguments = (ins Cliff_MultivctTensor:$src);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$src);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$src attr-dict `:` type($out)";
 
@@ -257,8 +270,8 @@ def Cliff_Sign : Cliff_Op<"sign", [Pure, SameOperandsAndResultType]> {
 def Cliff_Idx : Cliff_Op<"get_idx", [Pure]> {
     let summary = "Obtain a multivectors i part";
 
-    let arguments = (ins Cliff_MultivctTensor:$src, Cliff_Int:$idx);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$src, Cliff_Int:$idx);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$src `,` $idx attr-dict `:` type($src) `,` type($idx)  `->` type($out)";
 
