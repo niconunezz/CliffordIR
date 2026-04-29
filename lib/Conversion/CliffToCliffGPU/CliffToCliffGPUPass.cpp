@@ -98,7 +98,10 @@ void populateCliffPatterns(CliffGPUTypeConverter &typeConverter, RewritePatternS
         GenericOpPattern<ReturnOp>,
         GenericOpPattern<GeoProd>,
         GenericOpPattern<Exp>,
-        GenericOpPattern<Sandwich>
+        GenericOpPattern<Sandwich>,
+        GenericOpPattern<LoadOp>,
+        GenericOpPattern<StoreOp>
+
     >(typeConverter, context);
 
 }
