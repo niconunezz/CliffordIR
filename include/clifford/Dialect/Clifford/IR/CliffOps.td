@@ -15,21 +15,6 @@ class Cliff_Op<string mnemonic, list<Trait> traits = []> :
     Op<Cliff_Dialect, mnemonic, traits> {
     }
 
-
-def Cliff_LoadOp : Cliff_Op<"load", []> {
-    let summary = "Load a tensor from a pointer";
-    let arguments = (ins Cliff_Pointer:$ptr);
-    let results = (outs Cliff_GeometricKindTensor:$value);
-    let assemblyFormat = "$ptr attr-dict `:` type($ptr) `->` type($value)";
-}
-
-def Cliff_StoreOp : Cliff_Op<"store", []> {
-    let summary = "Load a tensor from a pointer";
-    let arguments = (ins Cliff_PointerTensor:$ptr, Cliff_GeometricKindTensor:$value);
-    let assemblyFormat = "$ptr `,` $value attr-dict `:` type($ptr) `,` type($value)";
-}
-
-
 def Cliff_FuncOp : Cliff_Op<"func", [FunctionOpInterface,
                                    IsolatedFromAbove,
                                    HasParent<"ModuleOp">]> {
