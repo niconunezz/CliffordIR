@@ -29,24 +29,15 @@ public:
     using OpConversionPattern::OpConversionPattern;
     LogicalResult matchAndRewrite(GeoProd op, GeoProd::Adaptor adaptor, ConversionPatternRewriter &rewriter) const override { 
         auto converter = getTypeConverter();
-        RankedTensorType lhsTensor = dyn_cast<RankedTensorType>(op.getLhs().getType());
-        RankedTensorType rhsTensor = dyn_cast<RankedTensorType>(op.getRhs().getType());
-        RankedTensorType outTensor = dyn_cast<RankedTensorType>(op.getOut().getType());
-        if (!lhsTensor || !rhsTensor || !outTensor)
-            return rewriter.notifyMatchFailure(op, "operands must be ranked tensors");
-        auto lhsTy = dyn_cast<Cliff_MultivectorType>(lhsTensor.getElementType());
-        auto rhsTy = dyn_cast<Cliff_MultivectorType>(rhsTensor.getElementType());
-        auto outTy = dyn_cast<Cliff_MultivectorType>(outTensor.getElementType());
-        if (!lhsTy || !rhsTy || !outTy)
-            return rewriter.notifyMatchFailure(op, "tensor elements must be multivector types");
-        
-        if (lhsTy.getSpace() != rhsTy.getSpace() || 
-            lhsTy.getSpace() != outTy.getSpace())
-            return rewriter.notifyMatchFailure(op, "all operands must belong to the same algebra");
+        RankedTensorType lhsTensor = op.getLhs().getType();
+        RankedTensorType rhsTensor = op.getRhs().getType();
+        RankedTensorType outTensor = op.getOut().getType();
 
-        auto algebra = dyn_cast<CliffordAlgebraAttr>(lhsTy.getSpace());
-        if (!algebra)
-            return rewriter.notifyMatchFailure(op, "algebra attribute must be a CliffordAlgebraAttr");
+        auto lhsTy = cast<Cliff_MultivectorType>(lhsTensor.getElementType());
+        auto rhsTy = cast<Cliff_MultivectorType>(rhsTensor.getElementType());
+        auto outTy = cast<Cliff_MultivectorType>(outTensor.getElementType());
+
+        auto algebra = lhsTy.getSpace();
 
         unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
 
@@ -57,7 +48,6 @@ public:
         uint64_t lhsMaskCopy = lhsMask;
         uint64_t rhsMaskCopy = rhsMask;
         uint64_t outMaskCopy = outMask;
-
 
         llvm::DenseMap<int, int> basisToOffset;
         int off = 0;
