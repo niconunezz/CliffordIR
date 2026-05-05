@@ -56,6 +56,8 @@ public:
 
     int32_t getInDimSizeLog2(StringAttr Name) const;
 
+    LinearLayout sublayout(ArrayRef<StringAttr> inDimNames, ArrayRef<StringAttr> outDimNames) const;
+
     explicit LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames);
 
     explicit LinearLayout(

@@ -108,6 +108,38 @@ TEST_F(LinearLayoutTest, GetOutDimSizeLog2) {
   EXPECT_EQ(layout.getOutDimSizeLog2(S("dim0")), 2);
 }
 
+TEST_F(LinearLayoutTest, Apply) {
+  LinearLayout layout(
+      {
+          {S("in1"), {{4, 2}, {2, 1}, {1, 0}}},
+          {S("in2"), {{1, 2}, {2, 1}}},
+      },
+      {{S("out1"), 8}, {S("out2"), 4}});
+  EXPECT_THAT(layout.apply({{S("in1"), 0}, {S("in2"), 0}}),
+              ElementsAre(Pair(S("out1"), 0), Pair(S("out2"), 0)));
+  EXPECT_THAT(layout.apply({{S("in2"), 0}, {S("in1"), 1}}),
+              ElementsAre(Pair(S("out1"), 4), Pair(S("out2"), 2)));
+  EXPECT_THAT(layout.apply({{S("in2"), 1}, {S("in1"), 0}}),
+              ElementsAre(Pair(S("out1"), 1), Pair(S("out2"), 2)));
+}
+
+TEST_F(LinearLayoutTest, Sublayout) {
+  LinearLayout l1({{S("in1"), {{1, 0}, {0, 1}, {2, 0}}}, {S("in2"), {{0, 1}}}},
+                  {S("out1"), S("out2")});
+  EXPECT_EQ(l1.sublayout({S("in1"), S("in2")}, {S("out1")}),
+            LinearLayout({{S("in1"), {{1}, {0}, {2}}}, {S("in2"), {{0}}}},
+                         {S("out1")}));
+  EXPECT_EQ(l1.sublayout({S("in2"), S("in1")}, {S("out1")}),
+            LinearLayout({{S("in1"), {{1}, {0}, {2}}}, {S("in2"), {{0}}}},
+                         {S("out1")}));
+  EXPECT_EQ(l1.sublayout({S("in2"), S("in1")}, {S("out2"), S("out1")}), l1);
+  EXPECT_EQ(l1.sublayout({S("in1")}, {S("out1")}),
+            LinearLayout({{S("in1"), {{1}, {0}, {2}}}}, {S("out1")}));
+  EXPECT_EQ(l1.sublayout({}, {}), LinearLayout::empty());
+  // EXPECT_EQ(l1.sublayout({S("in1")}, {}),
+  //           LinearLayout({{S("in1"), {{}, {}, {}}}}, {}));
+}
+
 
 } // namespace
 } // namespace mlir::cliff

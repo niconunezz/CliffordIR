@@ -1,10 +1,10 @@
 #include "clifford/Tools/LinearLayout.h"
-
+#include "llvm/ADT/DenseSet.h"
 namespace mlir::clg {
-
 
 using BasesT = LinearLayout::BasesT;
 using namespace mlir::cliff;
+using namespace llvm;
 
 BasesT makeBasesMap(ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases) {
     BasesT retBases;
@@ -68,6 +68,41 @@ bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
 
     return LinearLayout({{inDimName, std::move(bases)}}, {outDimName});
 }
+
+LinearLayout LinearLayout::sublayout(ArrayRef<StringAttr> inDimNames, ArrayRef<StringAttr> outDimNames) const {
+        SmallDenseSet<StringAttr> inDimNamesSet(inDimNames.begin(), inDimNames.end());
+        SmallDenseSet<StringAttr> outDimNamesSet(outDimNames.begin(), outDimNames.end());
+
+        SmallVector<int32_t> outDimIndices;
+        SmallVector<StringAttr> validOutDims;
+        for (auto [idx, outDim] : llvm::enumerate(outDimNamesSet)) {
+            if (outDims.contains(outDim)) {
+                outDimIndices.push_back(idx);
+                
+            }
+        }
+
+        BasesT newBases;
+        for (auto &[dimName, inDimBases] : bases) {
+            if (inDimNamesSet.contains(dimName)) {
+                auto &newDimBase = newBases[dimName];
+                for (auto &basis : inDimBases) {
+                    auto& newBasis = newDimBase.emplace_back();
+                    for (auto idx : outDimIndices) {
+                        newBasis.push_back(basis[idx]);    
+                    }
+                }
+            }
+        }
+
+        for (auto &[outDimName, outDimBases] : outDims) {
+            if (outDimNamesSet.contains(outDimName))
+                validOutDims.push_back(outDimName);
+            
+        }
+
+        return LinearLayout(newBases, validOutDims);
+    }
 
 SmallVector<StringAttr> getSupremum(const SmallVector<StringAttr> &a, const SmallVector<StringAttr> &b) {
     SmallVector<StringAttr> ret;
