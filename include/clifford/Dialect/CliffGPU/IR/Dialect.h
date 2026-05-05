@@ -11,6 +11,8 @@
 
 
 #include "mlir/IR/DialectImplementation.h"
+
+#include "clifford/Dialect/Clifford/IR/Dialect.h"
 #include "clifford/Tools/StrUtils.h"
 
 #include "clifford/Tools/LinearLayout.h"
@@ -19,6 +21,9 @@
 #include "clifford/Dialect/CliffGPU/IR/Dialect.h.inc"
 #define GET_ATTRDEF_CLASSES
 #include "clifford/Dialect/CliffGPU/IR/CliffGPUAttrDefs.h.inc"
+
+#define GET_OP_CLASSES
+#include "clifford/Dialect/CliffGPU/IR/CliffGPUOps.h.inc"
 
 
 namespace mlir::clg {

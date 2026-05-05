@@ -1,5 +1,8 @@
 set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
 
+set(LLVM_TARGET_DEFINITIONS CliffGPUOps.td)
+mlir_tablegen(CliffGPUOps.h.inc -gen-op-decls)
+mlir_tablegen(CliffGPUOps.cpp.inc -gen-op-defs)
 
 set(LLVM_TARGET_DEFINITIONS CliffGPUDialect.td)
 mlir_tablegen(Dialect.h.inc -gen-dialect-decls)
