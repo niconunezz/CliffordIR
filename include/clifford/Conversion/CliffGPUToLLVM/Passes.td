@@ -7,5 +7,6 @@ def ConvertCliffGPUToLLVM : Pass<"convert-cliffGPU-to-llvm", "mlir::ModuleOp"> {
     let dependentDialects = ["mlir::clg::CliffGPUDialect",
                             "mlir::cliff::CliffDialect",
                             "mlir::arith::ArithDialect",
-                            "mlir::LLVM::LLVMDialect"];
-}
+                            "mlir::LLVM::LLVMDialect",
+                            "mlir::NVVM::NVVMDialect"];
+                            }

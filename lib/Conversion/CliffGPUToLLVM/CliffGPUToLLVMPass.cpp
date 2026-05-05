@@ -9,7 +9,7 @@
 
 #include "clifford/Conversion/CliffGPUToLLVM/Passes.h"
 #include "clifford/Conversion/CliffGPUToLLVM/TypeConverter.h"
-
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 namespace mlir::clg {
 #define GEN_PASS_DEF_CONVERTCLIFFGPUTOLLVM
 #include "clifford/Conversion/CliffGPUToLLVM/Passes.h.inc"
