@@ -1,5 +1,4 @@
-
-include "CliffTypes.td"
+include "clifford/Dialect/Clifford/IR/CliffTypes.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td" // SymbolUserOpInterface
 include "mlir/IR/OpAsmInterface.td" // OpAsmOpInterface

@@ -1,7 +1,7 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
-include "CliffDialect.td"
-include "CliffTypeInterfaces.td"
+include "clifford/Dialect/Clifford/IR/CliffDialect.td"
+include "clifford/Dialect/Clifford/IR/CliffTypeInterfaces.td"
 
 class Cliff_Type<string name, string typeMnemonic> : TypeDef<Cliff_Dialect, name> {
     let mnemonic = typeMnemonic;
