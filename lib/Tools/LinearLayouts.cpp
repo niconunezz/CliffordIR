@@ -13,7 +13,13 @@ BasesT makeBasesMap(ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32
     }
     return retBases;
 }
-
+llvm::MapVector<StringAttr, int32_t> makeOutDimsMap(ArrayRef<std::pair<StringAttr, int32_t>> bases) {
+    llvm::MapVector<StringAttr, int32_t> retBases;
+    for (auto const &[outDim, outDimBases] : bases) {
+        retBases[outDim] = outDimBases;
+    }
+    return retBases;
+}
 
 bool operator==(const LinearLayout &lhs, const LinearLayout &rhs) {
 
@@ -293,8 +299,13 @@ LinearLayout::LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames)
 
 LinearLayout::LinearLayout(
       ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases,
-      ArrayRef<StringAttr> outDimNames) : LinearLayout(makeBasesMap(bases), outDimNames) {
+      ArrayRef<std::pair<StringAttr, int32_t>> outDims) : LinearLayout(makeBasesMap(bases), makeOutDimsMap(outDims)) {};
 
+LinearLayout::LinearLayout(BasesT bases, llvm::MapVector<StringAttr, int32_t> outDims) : bases(bases), outDims(outDims) {};
+
+LinearLayout::LinearLayout(
+      ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases,
+      ArrayRef<StringAttr> outDimNames) : LinearLayout(makeBasesMap(bases), outDimNames) {
 }
 
 
