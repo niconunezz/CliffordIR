@@ -52,6 +52,30 @@ public:
         return 1 << getInDimSizeLog2(Name);
     }
 
+    std::vector<int32_t> getBasis(StringAttr inDimName, int32_t pos) const {
+        auto it = bases.find(inDimName);
+        assert (it != 0);
+        assert(pos >= 0);
+        return it->second[pos];
+    }
+
+    int32_t getOutDimIndex(StringAttr outDimName) const {
+        int32_t i = 0;
+        
+        for (auto [name, _] : outDims) {
+            if (outDimName == name)
+                return i;
+            ++i;
+        }
+        llvm::report_fatal_error("OutDimName doesnt belong to current outDims!");
+    }
+    
+    int32_t getBasis(StringAttr inDimName, int32_t pos, StringAttr outDimName) const {
+        int32_t outIdx = getOutDimIndex(outDimName); 
+        return getBasis(inDimName, pos)[outIdx];
+    }
+
+SmallVector<std::pair<StringAttr, int32_t>> apply(ArrayRef<std::pair<StringAttr, int32_t>> ins) const;
 
 
     int32_t getInDimSizeLog2(StringAttr Name) const;
