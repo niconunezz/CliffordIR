@@ -280,6 +280,22 @@ std::string LinearLayout::toString() const {
   return ret;
 }
 
+SmallVector<std::pair<StringAttr, int32_t>> LinearLayout::apply(ArrayRef<std::pair<StringAttr, int32_t>> ins) const {
+    SmallVector<std::pair<StringAttr, int32_t>> ret;
+
+    for (StringAttr outDim : getOutDimNames()) {
+        int32_t out = 0;
+        for (auto &[inDimName, val] : ins) {
+            for (int i = 0; i < getInDimSizeLog2(inDimName); ++i) {
+                if (val & (1<<i))
+                    out ^= getBasis(inDimName, i, outDim);
+            }
+        }
+        ret.push_back({outDim, out});
+    }
+    return ret;
+}
+
 LinearLayout::LinearLayout(BasesT bases, ArrayRef<StringAttr> outDimNames)
  : bases(std::move(bases)) {
 

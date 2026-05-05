@@ -62,6 +62,14 @@ public:
       ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases,
       ArrayRef<StringAttr> outDimNames);
 
+    explicit LinearLayout(
+      ArrayRef<std::pair<StringAttr, std::vector<std::vector<int32_t>>>> bases,
+        ArrayRef<std::pair<StringAttr, int32_t>> outDimNames);
+    
+    explicit LinearLayout(
+        BasesT bases, llvm::MapVector<StringAttr, int32_t> outDims
+    );
+
     std::string toString() const;
 
     static LinearLayout empty() { return {}; }
