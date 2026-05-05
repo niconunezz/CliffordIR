@@ -42,6 +42,26 @@ namespace mlir::clg {
         template <typename... Args> LLVM::FMAOp fma(Args &&...args) {
             return LLVM::FMAOp::create(*builder, loc, std::forward<Args>(args)...);
         }
+        template <typename... Args> LLVM::OrOp or_(Args &&...args) {
+            return LLVM::OrOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::OrOp xor_(Args &&...args) {
+            return LLVM::XOrOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::AndOp and_(Args &&...args) {
+            return LLVM::AndOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::AShrOp ashr_(Args &&...args) {
+            return LLVM::AShrOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+                template <typename... Args> LLVM::ShlOp shl_(Args &&...args) {
+            return LLVM::ShlOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        Value int_val(int64_t value, int64_t bitwidth) {
+            Type ty = builder->getIntegerType(bitwidth);
+            return LLVM::ConstantOp::create(*builder, loc, ty, builder->getIntegerAttr(ty, value));
+        }
+        Value i32_val(int64_t value) { return int_val(value, 32); }
 
         Location loc;
         OpBuilder *builder;
