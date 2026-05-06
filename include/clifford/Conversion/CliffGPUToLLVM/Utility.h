@@ -57,6 +57,24 @@ namespace mlir::clg {
                 template <typename... Args> LLVM::ShlOp shl_(Args &&...args) {
             return LLVM::ShlOp::create(*builder, loc, std::forward<Args>(args)...);
         }
+        template <typename... Args> LLVM::LShrOp lshr_(Args &&...args) {
+            return LLVM::LShrOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::ICmpOp icmp_eq(Args &&...args) {
+            return LLVM::ICmpOp::create(*builder, loc, LLVM::ICmpPredicate::eq,
+                                    std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::SelectOp select(Args &&...args) {
+            return LLVM::SelectOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::GEPOp gep(Args &&...args) {
+            return LLVM::GEPOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::LoadOp load(Args &&...args) {
+            return LLVM::LoadOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+
+
         Value int_val(int64_t value, int64_t bitwidth) {
             Type ty = builder->getIntegerType(bitwidth);
             return LLVM::ConstantOp::create(*builder, loc, ty, builder->getIntegerAttr(ty, value));
