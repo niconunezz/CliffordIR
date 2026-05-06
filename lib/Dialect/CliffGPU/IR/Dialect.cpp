@@ -7,6 +7,9 @@
 #include "clifford/Dialect/CliffGPU/IR/CliffGPUAttrDefs.cpp.inc"
 #undef GET_ATTRDEF_CLASSES
 
+#define GET_OP_CLASSES
+#include "clifford/Dialect/CliffGPU/IR/CliffGPUOps.cpp.inc"
+
 using namespace mlir::clg;
 using namespace mlir::cliff;
 
@@ -218,6 +221,11 @@ void CliffGPUDialect::initialize() {
     >();
 
     addInterfaces<CliffGPUOpAsmDialectInterface>();
+
+    addOperations<
+        #define GET_OP_LIST
+        #include "clifford/Dialect/CliffGPU/IR/CliffGPUOps.cpp.inc"
+        >();
 
 }
 
