@@ -4,6 +4,8 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "clifford/Tools/LinearLayout.h"
+
 
 namespace mlir::clg {
 
@@ -89,6 +91,12 @@ namespace mlir::clg {
     Value packElements(Location loc, ValueRange resultVals,
                        const TypeConverter *typeConverter,
                        RewriterBase &rewriter, Type type);
+
+
+
+    SmallVector<std::pair<StringAttr, Value>> applyLinearLayout(Location loc, LinearLayout &layout,
+                                                                ArrayRef<std::pair<StringAttr, Value>> indices,
+                                                                const TypeConverter *typeConverter, RewriterBase &rewriter);
 
 }
 

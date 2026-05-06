@@ -268,6 +268,27 @@ int32_t LinearLayout::getInDimSizeLog2(StringAttr Name) const {
     return (it->second).size();
 };
 
+int32_t LinearLayout::getTotalInDimSizeLog2() const {
+    auto inDimNames = getInDimNames();
+    return std::accumulate(inDimNames.begin(),
+                           inDimNames.end(), 
+                           0, 
+                           [&](uint32_t acc, StringAttr dimName){
+                                return acc + getInDimSizeLog2(dimName); }
+                          );
+};
+
+int32_t LinearLayout::getTotalOutDimSizeLog2() const {
+    auto outDimNames = getOutDimNames();
+    return std::accumulate(outDimNames.begin(),
+                           outDimNames.end(), 
+                           0, 
+                           [&](uint32_t acc, StringAttr dimName){
+                                return acc + getOutDimSizeLog2(dimName); }
+                          );
+};
+
+
 int32_t LinearLayout::getOutDimSizeLog2(StringAttr Name) const {
     auto it = outDims.find(Name);
     assert(it != outDims.end() && "Dim not found!");

@@ -52,6 +52,14 @@ public:
         return 1 << getInDimSizeLog2(Name);
     }
 
+    int32_t getTotalInDimSizeLog2() const;
+    int32_t getTotalOutDimSizeLog2() const;
+
+    int32_t getNumInDims() const { return bases.size(); };
+    int32_t getNumOutDims() const { return outDims.size(); };
+
+
+
     std::vector<int32_t> getBasis(StringAttr inDimName, int32_t pos) const {
         auto it = bases.find(inDimName);
         assert (it != 0);
