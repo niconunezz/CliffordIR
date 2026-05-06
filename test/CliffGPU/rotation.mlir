@@ -5,8 +5,7 @@ module {
   cliff.func @example(%arg0 : !cliff.ptr<f32>, 
                       %arg1 : !cliff.ptr<f32>, 
                       %time : !cliff.ptr<f32>) -> tensor<64x32x!cliff.point<euclidean, true, #space>> {
-      
-      %0 = clg.get_tid : i32
+              
       
       %t0 = cliff.load %arg0 : !cliff.ptr<f32> -> tensor<64x!cliff.point<euclidean, true, #space>, #layout>
       %t1 = cliff.load %arg1 : !cliff.ptr<f32> -> tensor<64x!cliff.point<euclidean, true, #space>, #layout>
