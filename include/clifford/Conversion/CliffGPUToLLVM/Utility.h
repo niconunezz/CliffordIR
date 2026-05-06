@@ -45,7 +45,7 @@ namespace mlir::clg {
         template <typename... Args> LLVM::OrOp or_(Args &&...args) {
             return LLVM::OrOp::create(*builder, loc, std::forward<Args>(args)...);
         }
-        template <typename... Args> LLVM::OrOp xor_(Args &&...args) {
+        template <typename... Args> LLVM::XOrOp xor_(Args &&...args) {
             return LLVM::XOrOp::create(*builder, loc, std::forward<Args>(args)...);
         }
         template <typename... Args> LLVM::AndOp and_(Args &&...args) {
@@ -54,7 +54,7 @@ namespace mlir::clg {
         template <typename... Args> LLVM::AShrOp ashr_(Args &&...args) {
             return LLVM::AShrOp::create(*builder, loc, std::forward<Args>(args)...);
         }
-                template <typename... Args> LLVM::ShlOp shl_(Args &&...args) {
+        template <typename... Args> LLVM::ShlOp shl_(Args &&...args) {
             return LLVM::ShlOp::create(*builder, loc, std::forward<Args>(args)...);
         }
         template <typename... Args> LLVM::LShrOp lshr_(Args &&...args) {
