@@ -4,6 +4,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+
 #include "clifford/Conversion/CliffGPUToLLVM/Utility.h"
 
 namespace mlir::clg
