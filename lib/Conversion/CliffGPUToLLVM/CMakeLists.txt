@@ -3,7 +3,9 @@ add_clifford_library(CliffGPUToLLVMPass
     Utility.cpp
     CliffGPUToLLVMPass.cpp
     TypeConverter.cpp
-    # CliffGPUConversion.cpp
+    LoadStoreOpToLLVM.cpp
+    GeometricToLLVM.cpp
+    GeometricRewrites.cpp
     
     DEPENDS
     CliffordGPUConversionPassIncGen
