@@ -69,6 +69,9 @@ namespace mlir::clg {
         template <typename... Args> LLVM::SelectOp select(Args &&...args) {
             return LLVM::SelectOp::create(*builder, loc, std::forward<Args>(args)...);
         }
+        template <typename... Args> LLVM::ICmpOp icmp_ne(Args &&...args) {
+            return LLVM::ICmpOp::create(*builder, loc, LLVM::ICmpPredicate::ne, std::forward<Args>(args)...);
+        }
         template <typename... Args> LLVM::GEPOp gep(Args &&...args) {
             return LLVM::GEPOp::create(*builder, loc, std::forward<Args>(args)...);
         }
