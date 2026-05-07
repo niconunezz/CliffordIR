@@ -187,6 +187,56 @@ namespace mlir::clg {
         return result;
     }
 
+    SmallVector<Value> computeIndices(Location loc, LinearLayout &layout,
+                                                                ArrayRef<Value> x,
+                                                                RewriterBase &rewriter) {
+        auto b = CliffordLLVMOpBuilder(loc, rewriter);
+        SmallVector<Value> ret;
+        uint32_t numOutDims = llvm::size(layout.getOutDimNames());
+        llvm::MapVector<uint32_t, std::vector<std::pair<StringAttr, std::vector<int32_t>>>> outDimIdxToPerDimValues;
+
+        for (uint32_t outDimIdx = 0; outDimIdx < numOutDims; outDimIdx++) {
+
+            for (auto &[inDimName, inDimBases] : layout.getBases()) {
+                std::vector<int32_t> valuesPerDim;
+                for (auto &basis : inDimBases) {
+                    int32_t el = basis[outDimIdx];
+                    if (el != 0)
+                        valuesPerDim.push_back(el);
+                }
+                outDimIdxToPerDimValues[outDimIdx].emplace_back(inDimName, valuesPerDim);
+            }
+        }
+
+        uint32_t numInDims = llvm::size(layout.getInDimNames());
+        SmallVector<uint32_t> shifts(numInDims, 1);
+        for (uint32_t outDimIdx = 0; outDimIdx < numOutDims; ++outDimIdx) {
+            llvm::errs() << "outDimIdx = " << outDimIdx << "\n";
+            Value zeroV = b.i32_val(0);
+            auto res = zeroV;
+            uint32_t outerIdx = 0;
+            
+            for (auto &[inDimName, values] : outDimIdxToPerDimValues[outDimIdx]) {
+                llvm::errs() << "x[" << outerIdx << "] : " << "\n";
+                x[outerIdx].dump();
+                auto numValues = layout.getInDimSizeLog2(inDimName);
+                llvm::errs() << "For inDimName : " << inDimName << " numValues: " << numValues << "\n";
+                for (auto &val : values) {
+                    Value activeBit = b.and_(x[outerIdx], b.i32_val(1 << (numValues-shifts[outerIdx])));
+                    llvm::errs() << "and_ with 1 << " << numValues-shifts[outerIdx] << "\n";
+                    Value isActive = b.icmp_ne(activeBit, zeroV);
+                    Value contrib = b.select(isActive, b.i32_val(val), zeroV);
+                    res = b.add(res, contrib);
+                    ++shifts[outerIdx];
+                }
+                ++outerIdx;
+            }
+
+            ret.push_back(res);
+        }
+        
+        return ret;
+    }
     SmallVector<std::pair<StringAttr, Value>> applyLinearLayout(Location loc, LinearLayout &layout,
                                                                 ArrayRef<std::pair<StringAttr, Value>> indices,
                                                                 const TypeConverter *typeConverter, RewriterBase &rewriter) {
@@ -198,7 +248,7 @@ namespace mlir::clg {
 
         for (auto const &[inDimName, value] : indices) {
             APInt constant;
-            if (mlir::matchPattern(value, mlir::m_ConstantInt(&constant))) {
+            if (matchPattern(value, m_ConstantInt(&constant))) {
                 constantIns.push_back({inDimName, (int32_t)constant.getSExtValue()});
             }
             else {

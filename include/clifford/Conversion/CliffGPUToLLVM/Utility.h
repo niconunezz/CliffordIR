@@ -101,6 +101,10 @@ namespace mlir::clg {
                                                                 ArrayRef<std::pair<StringAttr, Value>> indices,
                                                                 const TypeConverter *typeConverter, RewriterBase &rewriter);
 
+    SmallVector<Value> computeIndices(Location loc, LinearLayout &layout,
+                                                                ArrayRef<Value> x,
+                                                                RewriterBase &rewriter);
+
 }
 
 #endif // CLIFFORD_CONVERSION_CLIFFGPUTOLLVM_UTILITY_H
