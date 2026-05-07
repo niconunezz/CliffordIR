@@ -28,10 +28,14 @@ CliffGPUToLLVMTypeConverter::CliffGPUToLLVMTypeConverter(MLIRContext *ctx) : con
         LinearEncodingAttr llAttr = dyn_cast<LinearEncodingAttr>(type.getEncoding());
         assert(llAttr && "Encodings should always be linear encodings!");
 
-        //! this doesnt make sense rn, must think about
-        // unsigned elPerThread = llAttr.getTotalElemsPerThread(type.getShape());
-        SmallVector<Type, 4> types(1, eltType);
+        unsigned elPerThread = llAttr.getTotalElemsPerThread(type.getShape());
+        SmallVector<Type, 4> types(elPerThread, eltType);
         return LLVM::LLVMStructType::getLiteral(ctx, types);
+    });
+
+    addConversion([&](cliff::Cliff_PointerType pointer) {
+        auto ctx = pointer.getContext();
+        return LLVM::LLVMPointerType::get(ctx, 0);
     });
 }
 
@@ -40,7 +44,7 @@ CliffGPUToLLVMConversionTarget::CliffGPUToLLVMConversionTarget(MLIRContext &ctx,
 
     addLegalOp<ModuleOp>();
     addIllegalOp<cliff::Rotate, cliff::Translate>();
-    addLegalDialect<mlir::LLVM::LLVMDialect, mlir::arith::ArithDialect, mlir::math::MathDialect>();
+    addLegalDialect<mlir::LLVM::LLVMDialect, mlir::arith::ArithDialect, mlir::math::MathDialect, mlir::NVVM::NVVMDialect>();
     addIllegalDialect<cliff::CliffDialect, clg::CliffGPUDialect>();
 
 }
