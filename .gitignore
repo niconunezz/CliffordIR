@@ -22,9 +22,26 @@
 *.dylib
 *.dll
 
+.venv/
 # Fortran module files
 *.mod
 *.smod
+
+# files that are created but shouldnt be uploaded
+mlir-translate
+llc_mlir
+*.ptx
+out.mlir
+cleanOutput.mlir
+docs.md
+ideas.md
+output.ll
+output.mlir
+*.pyc
+*.npz
+notes.md
+Example_generated.mlir
+testing.py
 
 # Compiled Static libraries
 *.lai
