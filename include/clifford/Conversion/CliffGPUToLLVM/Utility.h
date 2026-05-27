@@ -78,13 +78,21 @@ namespace mlir::clg {
         template <typename... Args> LLVM::LoadOp load(Args &&...args) {
             return LLVM::LoadOp::create(*builder, loc, std::forward<Args>(args)...);
         }
+        template <typename... Args> LLVM::StoreOp store(Args &&...args) {
+            return LLVM::StoreOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
 
 
         Value int_val(int64_t value, int64_t bitwidth) {
             Type ty = builder->getIntegerType(bitwidth);
             return LLVM::ConstantOp::create(*builder, loc, ty, builder->getIntegerAttr(ty, value));
         }
+
         Value i32_val(int64_t value) { return int_val(value, 32); }
+
+        Value f32_val(double value) {
+            return LLVM::ConstantOp::create(*builder, loc, builder->getF32Type(), builder->getF32FloatAttr(value));
+        }
 
         Location loc;
         OpBuilder *builder;

@@ -82,7 +82,7 @@ public:
             while (dynMask) {
 
                 auto dynBasis = LLVM::ExtractValueOp::create(rewriter, loc, dynMultivector, idx);
-                Value ret = arith::MulFOp::create(rewriter, loc, cstScalar, dynBasis);
+                Value ret = b.fmul(cstScalar, dynBasis);
                 result = LLVM::InsertValueOp::create(rewriter, loc, result, ret, {0, idx});
                 dynMask &= dynMask - 1;
                 idx++;
@@ -110,12 +110,12 @@ public:
                 if (newSign != 0) {
 
                     auto currRhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, rhsMultivector, j);
-                    Value prod = arith::MulFOp::create(rewriter, loc, currLhsBasis, currRhsBasis);
-                    Value ret = newSign==1 ? prod : arith::NegFOp::create(rewriter, loc, prod);
+                    Value prod = b.fmul(currLhsBasis, currRhsBasis);
+                    Value ret = newSign==1 ? prod : b.neg(prod);
                     
                     int outIndex = basisToOffset[newBasis];
                     auto acc = LLVM::ExtractValueOp::create(rewriter, loc, result, {0, outIndex});
-                    Value currOutVal = arith::AddFOp::create(rewriter, loc, acc, ret);                    
+                    Value currOutVal = b.fadd(acc, ret);                    
                     result = LLVM::InsertValueOp::create(rewriter, loc, result, currOutVal, {0, outIndex});
 
                 }
@@ -234,7 +234,8 @@ public:
         auto newFuncOp = LLVM::LLVMFuncOp::create(rewriter, op.getLoc(), op.getName(), llvmFnType);
         rewriter.inlineRegionBefore(op.getBody(), newFuncOp.getBody(), newFuncOp.getBody().end());
 
-        
+        newFuncOp->setAttr("nvvm.kernel", 
+            rewriter.getIntegerAttr(rewriter.getIntegerType(1, false), 1));
         if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *converter, &sigConversion)))
             return rewriter.notifyMatchFailure(op, "Error occurred while converting region types");
         

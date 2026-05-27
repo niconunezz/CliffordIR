@@ -27,6 +27,6 @@ def CLG_LoadOp : CLG_Op<"load", []> {
 
 def CLG_StoreOp : CLG_Op<"store", []> {
     let summary = "Load a tensor from a pointer";
-    let arguments = (ins Cliff_PointerTensor:$ptr, Cliff_MultivctTensor:$value);
+    let arguments = (ins Cliff_Pointer:$ptr, Cliff_MultivctTensor:$value);
     let assemblyFormat = "$ptr `,` $value attr-dict `:` type($ptr) `,` type($value)";
 }
