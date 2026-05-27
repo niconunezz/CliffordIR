@@ -26,12 +26,16 @@ public:
         auto converter = getTypeConverter();
         RankedTensorType lhsTensor = op.getLhs().getType();
         RankedTensorType rhsTensor = op.getRhs().getType();
-        RankedTensorType outTensor = op.getOut().getType();
+        RankedTensorType outTensor = cast<RankedTensorType>(op.getOut().getType());
 
+        auto loc = op.getLoc();
+        auto b = CliffordLLVMOpBuilder(loc, rewriter);
+        
         auto lhsTy = cast<Cliff_MultivectorType>(lhsTensor.getElementType());
         auto rhsTy = cast<Cliff_MultivectorType>(rhsTensor.getElementType());
         auto outTy = cast<Cliff_MultivectorType>(outTensor.getElementType());
 
+        auto outActiveComps = __builtin_popcountll(outTy.getMask());
         auto algebra = lhsTy.getSpace();
 
         unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
@@ -53,22 +57,19 @@ public:
         }
 
         // codegen
-        auto loc = op.getLoc();
         auto fpTy = rewriter.getF32Type();
         
         auto adaptorLHS = adaptor.getLhs();
         auto lhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorLHS, 0);
         auto adaptorRHS = adaptor.getRhs();
         auto rhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorRHS, 0);
-
-        SmallVector<Type> newResultTypes;
-        if (failed(converter->convertTypes(outTensor, newResultTypes)))
-            return rewriter.notifyMatchFailure(op, "failed to convert return type");
-
-        assert(newResultTypes.size() == 1 && "GeoProd should return exactly 1 argument");
         
-        Type returnType = newResultTypes[0];
-        Value result = LLVM::UndefOp::create(rewriter, loc, returnType);
+        SmallVector<Value> resInitializer;
+        for (int i = 0; i < outActiveComps; ++i) {
+            resInitializer.push_back(b.f32_val(0.0f));
+        }
+        Value resultMv = packElements(loc, resInitializer, converter, rewriter, outTy);
+        Value result = packElements(loc, {resultMv}, converter, rewriter, outTensor);
 
         // scalar case, e.g. ((e01 + 4) * (scalar))
         if (lhsMask == 1 || rhsMask == 1) {

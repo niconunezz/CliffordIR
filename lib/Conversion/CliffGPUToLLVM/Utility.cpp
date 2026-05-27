@@ -176,14 +176,12 @@ namespace mlir::clg {
                        RewriterBase &rewriter, Type type) {
         auto structType = cast<LLVM::LLVMStructType>(typeConverter->convertType(type));
         auto b = CliffordLLVMOpBuilder(loc, rewriter);
-        
         Value result = LLVM::UndefOp::create(rewriter, loc, structType);
         auto structTypes = structType.getBody();
 
-        for (auto [i, value] : llvm::enumerate(resultVals)) {
-            Type currType = structTypes[i];
+        for (int i = 0; i < resultVals.size(); ++i)
             result = b.insert(structType, result, resultVals[i], i);
-        }
+        
         return result;
     }
 
@@ -211,19 +209,15 @@ namespace mlir::clg {
         uint32_t numInDims = llvm::size(layout.getInDimNames());
         SmallVector<uint32_t> shifts(numInDims, 1);
         for (uint32_t outDimIdx = 0; outDimIdx < numOutDims; ++outDimIdx) {
-            llvm::errs() << "outDimIdx = " << outDimIdx << "\n";
             Value zeroV = b.i32_val(0);
             auto res = zeroV;
             uint32_t outerIdx = 0;
             
             for (auto &[inDimName, values] : outDimIdxToPerDimValues[outDimIdx]) {
-                llvm::errs() << "x[" << outerIdx << "] : " << "\n";
                 x[outerIdx].dump();
                 auto numValues = layout.getInDimSizeLog2(inDimName);
-                llvm::errs() << "For inDimName : " << inDimName << " numValues: " << numValues << "\n";
                 for (auto &val : values) {
                     Value activeBit = b.and_(x[outerIdx], b.i32_val(1 << (numValues-shifts[outerIdx])));
-                    llvm::errs() << "and_ with 1 << " << numValues-shifts[outerIdx] << "\n";
                     Value isActive = b.icmp_ne(activeBit, zeroV);
                     Value contrib = b.select(isActive, b.i32_val(val), zeroV);
                     res = b.add(res, contrib);

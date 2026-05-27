@@ -55,7 +55,7 @@ LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int32_t numWarps, 
     ArrayRef<StringAttr> outDims = getStandardOutDims(ctx, rank);
     
     //todo : take this out, [] should be allowed
-    auto ll = LinearLayout::zeros1D(2, kReg, outDims[0]); // we ensure theres always a reg dimension
+    auto ll = LinearLayout::zeros1D(2, kReg, outDims[0]); 
     
     //todo : generalize this to any number of dimensions
     unsigned warpsPerRow = shape[order[0]] / threadsPerWarp;
