@@ -32,7 +32,9 @@ def generate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
         if (len(coeffs) == comps_c):
             cond=False
 
-    default_indices = idx
+    c_default_indices = idx
+    a_default_indices = np.nonzero(mv0.value)[0]
+    b_default_indices = np.nonzero(mv1.value)[0]
 
     for j in range(N):
 
@@ -40,7 +42,7 @@ def generate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
         mv1 = mv_b(*matrix_b[:, j])
         mv_out= (mv0 * mv1)
         vals = mv_out.value
-        coeffs = vals[default_indices]
+        coeffs = vals[c_default_indices]
 
         if (j == 0):  print(f"mv0 : {mv0}") ; print(f"mv1 : {mv1}") ;  print(f"out : {mv_out}")
 
@@ -51,3 +53,4 @@ def generate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
     np.savez("numerical/matrices/matrix_b", matrix_b.flatten())
     np.savez("numerical/matrices/matrix_c", C.flatten())
     
+    return c_default_indices, a_default_indices, b_default_indices
