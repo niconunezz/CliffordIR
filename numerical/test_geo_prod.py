@@ -225,7 +225,7 @@ def test_geo_prod(case, cuda_ctx):
     
     mod  = cuda.module_from_buffer(ptx.encode())
 
-    func = mod.get_function("geo_prod_scalar_case")
+    func = mod.get_function("geo_prod")
     func(A_dev, B_dev, result_dev,
      block=(N, 1, 1),
      grid=(1, 1, 1))

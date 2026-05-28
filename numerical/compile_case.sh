@@ -9,7 +9,7 @@ MASK_C=$3
 OUT_PTX=${4:-output.ptx}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TEMPLATE="$SCRIPT_DIR/../test/Conversion/Example.mlir"
+TEMPLATE="$SCRIPT_DIR/samples/geo_prod.mlir"
 TMP_MLIR=$(mktemp /tmp/cliff_case_XXXXXX.mlir)
 TMP_LLVM_MLIR=$(mktemp /tmp/cliff_llvm_XXXXXX.mlir)
 TMP_LL=$(mktemp /tmp/cliff_XXXXXX.ll)
