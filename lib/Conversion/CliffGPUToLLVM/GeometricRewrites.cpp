@@ -6,6 +6,7 @@
 
 using namespace mlir;
 using namespace mlir::cliff;
+using namespace mlir::clg;
 
 
 namespace {
@@ -16,11 +17,16 @@ public:
                                   PatternRewriter &rewriter) const override {
         auto loc = op.getLoc();
         auto fpTy = rewriter.getF32Type();
-        
-        Value cos = math::CosOp::create(rewriter, loc, fpTy, op.getAngle());
-        Value sin = math::SinOp::create(rewriter, loc, fpTy, op.getAngle());
+        auto b = CliffordLLVMOpBuilder(loc, rewriter);
+
+        auto cos = b.cos(fpTy, op.getAngle());
+        cos.setFastmathFlags(LLVM::FastmathFlags::afn);
+
+        auto sin = b.sin(fpTy, op.getAngle());
+        sin.setFastmathFlags(LLVM::FastmathFlags::afn);
+
         Value geoProd = GeoProd::create(rewriter, loc, fpTy, sin, op.getSrc());
-        Value ret = arith::AddFOp::create(rewriter, loc, cos, geoProd);
+        Value ret = b.fadd(cos, geoProd);
 
         rewriter.replaceOp(op, ret);
         return success();
@@ -36,11 +42,10 @@ public:
                                   PatternRewriter &rewriter) const override {
         auto loc = op.getLoc();
         auto fpTy = rewriter.getF32Type();
-        
-        Value one = arith::ConstantOp::create(rewriter, loc,
-                    rewriter.getFloatAttr(fpTy, 1.0));
+        auto b = CliffordLLVMOpBuilder(loc, rewriter);
+        Value one = b.f32_val(1.0);
         Value scaledMv = GeoProd::create(rewriter, loc, fpTy, op.getDist(), op.getSrc());
-        Value ret = arith::AddFOp::create(rewriter, loc, one, scaledMv);
+        Value ret = b.fadd(one, scaledMv);
 
         rewriter.replaceOp(op, ret);
         return success();

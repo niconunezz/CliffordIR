@@ -81,6 +81,12 @@ namespace mlir::clg {
         template <typename... Args> LLVM::StoreOp store(Args &&...args) {
             return LLVM::StoreOp::create(*builder, loc, std::forward<Args>(args)...);
         }
+        template <typename... Args> LLVM::SinOp sin(Args &&...args) {
+            return LLVM::SinOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
+        template <typename... Args> LLVM::CosOp cos(Args &&...args) {
+            return LLVM::CosOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
 
 
         Value int_val(int64_t value, int64_t bitwidth) {
