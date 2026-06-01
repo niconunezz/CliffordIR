@@ -101,8 +101,8 @@ LogicalResult Rotate::verify() {
 
 LogicalResult Add::verify() {
     auto lhsTensorTy = dyn_cast<RankedTensorType>(getLhs().getType());
-    auto rhsTensorTy = cast<RankedTensorType>(getRhs().getType());
-    auto outTensorTy = cast<RankedTensorType>(getOut().getType());
+    auto rhsTensorTy = dyn_cast<RankedTensorType>(getRhs().getType());
+    auto outTensorTy = dyn_cast<RankedTensorType>(getOut().getType());
 
     if (!lhsTensorTy || !rhsTensorTy || !outTensorTy)
         return failure();
