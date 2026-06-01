@@ -19,14 +19,16 @@ public:
         auto fpTy = rewriter.getF32Type();
         auto b = CliffordLLVMOpBuilder(loc, rewriter);
 
-        auto cos = b.cos(fpTy, op.getAngle());
-        cos.setFastmathFlags(LLVM::FastmathFlags::afn);
+        auto tensorTy = cast<RankedTensorType>(op.getSrc().getType());
+        auto mvTy = cast<Cliff_MultivectorType>(tensorTy.getElementType());
+        auto outTy = cast<RankedTensorType>(op.getResult().getType());
 
-        auto sin = b.sin(fpTy, op.getAngle());
-        sin.setFastmathFlags(LLVM::FastmathFlags::afn);
+        auto cos = CosOp::create(rewriter, loc, op.getAngle());
 
-        Value geoProd = GeoProd::create(rewriter, loc, fpTy, sin, op.getSrc());
-        Value ret = b.fadd(cos, geoProd);
+        auto sin = SinOp::create(rewriter, loc, op.getAngle());
+        auto resultType = op.getSrc().getType();
+        Value geoProd = GeoProd::create(rewriter, loc, resultType, sin, op.getSrc());
+        Value ret = Add::create(rewriter, loc, outTy, cos, geoProd);
 
         rewriter.replaceOp(op, ret);
         return success();

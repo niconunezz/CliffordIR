@@ -38,6 +38,10 @@ uint32_t Cliff_MultivectorType::getDegree() const {
     }
     return 0;
 }
+uint32_t Cliff_MultivectorType::isActiveComponent(uint32_t component) const {
+    auto mask = getMask();
+    return (1 << component) & mask;
+}
 
 uint64_t Cliff_MultivectorType::getActiveMask() const { return getMask(); }
 

@@ -130,8 +130,8 @@ def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
 def Cliff_Translate : Cliff_Op<"translate", [Pure]> {
     let summary = "Translate a point";
 
-    let arguments = (ins Cliff_ScalarTensor:$dist, Cliff_LineOrPointTensor:$src);
-    let results = (outs Cliff_MotorTensor:$out);
+    let arguments = (ins Cliff_MultivctTensor:$dist, Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
 
     let assemblyFormat = "$src `,` $dist attr-dict `:` type($src) `*` type($dist) `->` type($out)";
 }
@@ -139,11 +139,29 @@ def Cliff_Translate : Cliff_Op<"translate", [Pure]> {
 def Cliff_Rotate : Cliff_Op<"rotate", [Pure]> {
     let summary = "Rotate a point";
 
-    let arguments = (ins Cliff_ScalarTensor:$angle, Cliff_LineOrPointTensor:$src);
-    let results = (outs Cliff_MotorTensor:$out);
+    let arguments = (ins Cliff_MultivctTensor:$angle, Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
 
     let assemblyFormat = "$src `,` $angle attr-dict `:` type($src) `*` type($angle) `->` type($out)";
     let hasVerifier = 1;
+}
+
+def Cliff_SinOp : Cliff_Op<"sin", [Pure, SameOperandsAndResultType]> {
+    let summary = "Calculate elementwise sine";
+
+    let arguments = (ins Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
+def Cliff_CosOp : Cliff_Op<"cos", [Pure, SameOperandsAndResultType]> {
+    let summary = "Calculate elementwise cosine";
+
+    let arguments = (ins Cliff_MultivctTensor:$src);
+    let results = (outs Cliff_MultivctTensor:$out);
+
+    let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
 

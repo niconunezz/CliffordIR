@@ -117,6 +117,8 @@ def Cliff_Multivector : Cliff_ObjType<"Cliff_Multivector",
 
     let extraClassDeclaration = [{
         uint32_t getDegree() const;
+        uint32_t isActiveComponent(uint32_t component) const;
+
     }];
 }
 

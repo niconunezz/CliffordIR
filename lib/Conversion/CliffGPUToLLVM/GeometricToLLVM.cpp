@@ -135,6 +135,69 @@ public:
     }
 };
 
+class CliffAddOpPattern : public OpConversionPattern<Add> {
+public:
+    using OpConversionPattern::OpConversionPattern;
+    LogicalResult matchAndRewrite(Add op, Add::Adaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+
+        auto loc = op.getLoc();
+        auto typeConverter = getTypeConverter();
+        auto b = CliffordLLVMOpBuilder(loc, rewriter);
+        RankedTensorType lhsTensor = cast<RankedTensorType>(op.getLhs().getType());
+        RankedTensorType rhsTensor = cast<RankedTensorType>(op.getRhs().getType());
+        RankedTensorType outTensor = cast<RankedTensorType>(op.getOut().getType());
+
+        Cliff_MultivectorType lhsMv = cast<Cliff_MultivectorType>(lhsTensor.getElementType());
+        Cliff_MultivectorType rhsMv = cast<Cliff_MultivectorType>(rhsTensor.getElementType());
+        Cliff_MultivectorType outMv = cast<Cliff_MultivectorType>(outTensor.getElementType());
+
+        const auto outMask = outMv.getMask();
+        auto outMaskCopy = outMask;
+
+        auto llLhsTensors = adaptor.getLhs();
+        auto llRhsTensors = adaptor.getRhs();
+
+        SmallVector<Value> llLhsElements = unpackElements(loc, llLhsTensors, rewriter);
+        SmallVector<Value> llRhsElements = unpackElements(loc, llRhsTensors, rewriter);
+
+        assert(llLhsElements.size() == llRhsElements.size() && "lhs handles more multivectors than rhs\n");
+        
+        SmallVector<Value> llOutElements;
+        for (uint32_t i = 0; i < llLhsElements.size(); i++) {
+            auto mvLhsEls = unpackElements(loc, llLhsElements[i], rewriter);
+            auto mvRhsEls = unpackElements(loc, llRhsElements[i], rewriter);
+            uint32_t lhsIdx = 0;
+            uint32_t rhsIdx = 0;
+            SmallVector<Value> mvOutEls;
+            while (outMaskCopy) {
+                int outBasis = __builtin_ctz(outMaskCopy);
+                Value acc = b.f32_val(0.0f);
+                if (lhsMv.isActiveComponent(outBasis)) {
+                    acc = b.fadd(acc, mvLhsEls[lhsIdx]);
+                    ++lhsIdx;
+                }
+                if (rhsMv.isActiveComponent(outBasis)) {
+                    acc = b.fadd(acc, mvRhsEls[rhsIdx]);
+                    ++rhsIdx;
+                }
+                mvOutEls.push_back(acc);
+                outMaskCopy &= outMaskCopy - 1;
+            }
+            assert(lhsIdx == mvLhsEls.size() && "not all elements of lhs were used");
+            assert(rhsIdx == mvRhsEls.size() && "not all elements of rhs were used");
+
+            auto mvOutElsStruct = packElements(loc, mvOutEls, typeConverter, rewriter, outMv);
+            llOutElements.push_back(mvOutElsStruct);
+        }
+
+        auto ret = packElements(loc, llOutElements, typeConverter, rewriter, outTensor);
+        rewriter.replaceOp(op, ret);
+
+        return success();
+    }
+};
+
+
 class CliffReverseOpPattern : public OpConversionPattern<Reverse> {
 public:
     using OpConversionPattern::OpConversionPattern;
@@ -142,10 +205,10 @@ public:
         Location loc = op.getLoc();
         auto converter = getTypeConverter();
 
-        RankedTensorType srcTensor = dyn_cast<RankedTensorType>(op.getSrc().getType());
-        RankedTensorType outTensor = dyn_cast<RankedTensorType>(op.getOut().getType());
+        RankedTensorType srcTensor = cast<RankedTensorType>(op.getSrc().getType());
+        RankedTensorType outTensor = cast<RankedTensorType>(op.getOut().getType());
 
-        Cliff_MultivectorType srcMv = dyn_cast<Cliff_MultivectorType>(srcTensor.getElementType());
+        Cliff_MultivectorType srcMv = cast<Cliff_MultivectorType>(srcTensor.getElementType());
         
         const auto mask = srcMv.getMask();
         auto maskCopy = mask;
@@ -189,6 +252,78 @@ public:
     }
 };
 
+class CliffSinOpPattern : public OpConversionPattern<SinOp> {
+public:
+    using OpConversionPattern::OpConversionPattern;
+    LogicalResult matchAndRewrite(SinOp op, SinOp::Adaptor adaptor,
+    ConversionPatternRewriter &rewriter) const override {
+        
+        auto loc = op.getLoc();
+        auto b = CliffordLLVMOpBuilder(loc, rewriter);
+        auto fpTy = rewriter.getF32Type();
+
+        auto tensorTy = cast<RankedTensorType>(op.getSrc().getType());
+        auto mvTy = cast<Cliff_MultivectorType>(tensorTy.getElementType());
+
+        SmallVector<Value> multivectors = unpackElements(loc, adaptor.getSrc(), rewriter);
+        SmallVector<Value> outMultivectors;
+        for (uint32_t i = 0; i < multivectors.size(); ++i) {
+
+            SmallVector<Value> elements = unpackElements(loc, multivectors[i], rewriter);
+            SmallVector<Value> outElements;
+    
+            for (uint32_t j = 0; j < elements.size(); ++j) {
+                auto sin = b.sin(fpTy, elements[j]);
+                sin.setFastmathFlags(LLVM::FastmathFlags::afn);
+                outElements.push_back(sin);
+            }
+    
+            auto els_ret = packElements(loc, outElements, typeConverter, rewriter, mvTy);
+            outMultivectors.push_back(els_ret);
+        }
+        
+        auto ret = packElements(loc, outMultivectors, typeConverter, rewriter, tensorTy);
+        rewriter.replaceOp(op, ret);
+        return success();
+    }
+};
+
+class CliffCosOpPattern : public OpConversionPattern<CosOp> {
+public:
+    using OpConversionPattern::OpConversionPattern;
+    LogicalResult matchAndRewrite(CosOp op, CosOp::Adaptor adaptor,
+    ConversionPatternRewriter &rewriter) const override {
+        auto loc = op.getLoc();
+        auto b = CliffordLLVMOpBuilder(loc, rewriter);
+        auto fpTy = rewriter.getF32Type();
+
+        auto tensorTy = cast<RankedTensorType>(op.getSrc().getType());
+        auto mvTy = cast<Cliff_MultivectorType>(tensorTy.getElementType());
+
+        SmallVector<Value> multivectors = unpackElements(loc, adaptor.getSrc(), rewriter);
+        SmallVector<Value> outMultivectors;
+        for (uint32_t i = 0; i < multivectors.size(); ++i) {
+
+            SmallVector<Value> elements = unpackElements(loc, multivectors[i], rewriter);
+            SmallVector<Value> outElements;
+    
+            for (uint32_t j = 0; j < elements.size(); ++j) {
+                auto cos = b.cos(fpTy, elements[j]);
+                cos.setFastmathFlags(LLVM::FastmathFlags::afn);
+                outElements.push_back(cos);
+            }
+    
+            auto els_ret = packElements(loc, outElements, typeConverter, rewriter, mvTy);
+            outMultivectors.push_back(els_ret);
+        }
+        
+        auto ret = packElements(loc, outMultivectors, typeConverter, rewriter, tensorTy);
+        rewriter.replaceOp(op, ret);
+        return success();
+    }
+};
+
+
 class CliffReturnOpPattern : public OpConversionPattern<ReturnOp> {
 public:
     using OpConversionPattern::OpConversionPattern;
@@ -212,8 +347,6 @@ public:
             SmallVector<Type> converted;
             if (failed(converter->convertType(op.getArgument(i).getType(), converted)))
                 return rewriter.notifyMatchFailure(op, "Issue converting argument types");
-            // llvm::errs() << "arg " << i << " converted to " << converted.size() << " types\n";
-            // for (auto t : converted) llvm::errs() << "  -> " << t << "\n";
             sigConversion.addInputs(i, converted);
         }
             
@@ -253,6 +386,9 @@ void mlir::cliff::populateGeometricToLLVMPatterns(CliffGPUToLLVMTypeConverter &t
     patterns.insert<CliffReturnOpPattern, 
                     CliffFuncOpPattern, 
                     CliffGeoProdOpPattern,
-                    CliffReverseOpPattern
+                    CliffReverseOpPattern,
+                    CliffSinOpPattern,
+                    CliffCosOpPattern,
+                    CliffAddOpPattern
                     >(typeConverter, context);
 }

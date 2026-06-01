@@ -118,3 +118,17 @@ cliff.func @reverse_to_llvm(%arg0: tensor<64x!cliff.multivector<127, unknown, f3
     cliff.ret %0 : tensor<64x!cliff.multivector<127, unknown, f32, #space>, #layout>
 }
 
+
+// -----
+
+#layout = #clg.linear<{register = [], lane = [ [1], [2], [4], [8], [16]], warp = [[32]], block = []}>
+#space = #cliff.algebra<{p=2, q=0, r=1}>
+
+cliff.func @geo_prod(%t0 : tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>, %t1  : tensor<64x!cliff.multivector<1, unknown, f32, #space>, #layout>, %pointer : !cliff.ptr<f32>) {
+    
+    %2 = cliff.rotate %t0, %t1 : tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> * tensor<64x!cliff.multivector<1, unknown, f32, #space>, #layout> -> 
+                                 tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    
+    clg.store %pointer, %2 : !cliff.ptr<f32>, tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    cliff.ret
+}
