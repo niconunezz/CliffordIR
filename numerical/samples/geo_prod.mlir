@@ -19,3 +19,17 @@ cliff.func @geo_prod(%arg0 : !cliff.ptr<f32>, %arg1 : !cliff.ptr<f32>, %pointer 
     clg.store %pointer, %1 : !cliff.ptr<f32>, tensor<64x!cliff.multivector<MASK_C, unknown, f32, #space>, #layout>
     cliff.ret
 }
+
+cliff.func @rotation(%arg0 : !cliff.ptr<f32>, %arg1 : !cliff.ptr<f32>, %pointer : !cliff.ptr<f32>) {
+    
+    %t0 = clg.load %arg0 : !cliff.ptr<f32> -> tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    %t1 = clg.load %arg1 : !cliff.ptr<f32> -> tensor<64x!cliff.multivector<1, unknown, f32, #space>, #layout>
+
+    %0 = cliff.rotate %t0, %t1 :
+        tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> *
+        tensor<64x!cliff.multivector<1, unknown, f32, #space>, #layout> ->
+        tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+        
+    clg.store %pointer, %0 : !cliff.ptr<f32>, tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    cliff.ret
+}

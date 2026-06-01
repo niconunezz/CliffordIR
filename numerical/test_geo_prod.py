@@ -1,4 +1,4 @@
-from generate_oracle import generate_matrices
+from generate_oracle import generate_geo_prods_matrices, generate_rotate_matrices
 import pytest
 import numpy as np
 import pycuda.driver as cuda
@@ -14,8 +14,6 @@ e01 = blades['e01']
 e02 = blades['e02']
 e12 = blades['e12']
 e012 = blades['e012']
-
-
 
 # Grado 1 (vectores)
 mve0       = lambda a,b      : a + b*e0
@@ -63,7 +61,8 @@ mve0e012   = lambda a,b,c    : a + b*e0  + c*e012
 mve1e012   = lambda a,b,c    : a + b*e1  + c*e012
 
 mve0e1e2e01e02e12e012 = lambda a, b, c, d ,e , f, g, h : a + b*e0 + c*e1 + d*e2 + e*e01 + f*e02 + g*e12 + h*e012
-
+mv_point = lambda a, b, c, d: 0 + b*e02 + c*e01 + e12
+mv_scalar = lambda a : a*e1*e1
 
 def to_mask(arr):
     out = 0
@@ -173,13 +172,15 @@ CASES = [
 ]
 
 
+
+
 @pytest.mark.parametrize("case", CASES, ids=[c[0] for c in CASES])
 def test_geo_prod(case, cuda_ctx):
     N = 64
     print("running")
     name, mv_a, mv_b, comps_a, comps_b, comps_c = case
     #todo: cache it if neccesary
-    c_default_indices, a_default_indices, b_default_indices = generate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
+    c_default_indices, a_default_indices, b_default_indices = generate_geo_prods_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
     result_host = np.zeros(N * comps_c, dtype=np.float32)
     
     mask_perm = [0, 1, 2, 4, 3, 5, 6, 7]
@@ -237,3 +238,50 @@ def test_geo_prod(case, cuda_ctx):
     result_host = result_host.flatten()
 
     assert(np.allclose(result_host, expected, atol=1e-5))
+
+
+CASES_ROTATE = [
+    ("normal_case",       mv_point,    mv_scalar,    4, 1, 4),
+]
+
+@pytest.mark.parametrize("case", CASES_ROTATE, ids=["normal_case"])
+def test_rotate(case, cuda_ctx):
+    N = 64
+    name , mv_a, mv_b, comps_a, comps_b, comps_c = case
+
+    #todo: cache it if neccesary
+    generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
+    result_host = np.zeros(N * comps_c, dtype=np.float32)
+    
+
+    A = np.load("numerical/matrices/rotation/matrix_a.npz")['arr_0']
+    #! todo: study why this happens
+    A = A.reshape(comps_a, N)[[0, 2, 1, 3]]
+    B = np.load("numerical/matrices/rotation/matrix_b.npz")['arr_0']
+
+    expected = np.load("numerical/matrices/rotation/matrix_c.npz")['arr_0']
+
+    A_dev  = cuda.mem_alloc(A.nbytes)
+    B_dev = cuda.mem_alloc(B.nbytes)
+
+    result_dev = cuda.mem_alloc(result_host.nbytes)
+
+    cuda.memcpy_htod(A_dev, A)
+    cuda.memcpy_htod(B_dev, B)
+
+    # generate ptx for case
+    subprocess.run(["./numerical/compile_case.sh", str(0), str(0), str(0), "output.ptx"])
+
+    with open("output.ptx", "r") as f:
+        ptx = f.read()
+    
+    mod  = cuda.module_from_buffer(ptx.encode())
+    func = mod.get_function("rotation")
+    func(A_dev, B_dev, result_dev,
+     block=(N, 1, 1),
+     grid=(1, 1, 1))
+    
+    cuda.memcpy_dtoh(result_host, result_dev)
+
+    assert(np.allclose(result_host, expected, atol=1e-5))
+    
