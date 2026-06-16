@@ -33,3 +33,23 @@ cliff.func @rotation(%arg0 : !cliff.ptr<f32>, %arg1 : !cliff.ptr<f32>, %pointer 
     clg.store %pointer, %0 : !cliff.ptr<f32>, tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
     cliff.ret
 }
+
+
+cliff.func @complete_rotation(%x_ptr : !cliff.ptr<f32>, %y_ptr : !cliff.ptr<f32>, %angle_2_ptr : !cliff.ptr<f32>, %store_ptr : !cliff.ptr<f32>) {
+    
+    %x = clg.load %x_ptr : !cliff.ptr<f32> -> tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    %y = clg.load %y_ptr : !cliff.ptr<f32> -> tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    %angle_2 = clg.load %angle_2_ptr : !cliff.ptr<f32> -> tensor<64x!cliff.multivector<1, unknown, f32, #space>, #layout>
+    
+    %Z = cliff.rotate %x, %angle_2 :
+        tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> *
+        tensor<64x!cliff.multivector<1, unknown, f32, #space>, #layout> ->
+        tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+
+    %tmp = cliff.geo_prod %Z, %y :tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> * tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> -> tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    %Z_rev = cliff.reverse %Z : tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> -> tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    %out = cliff.geo_prod %tmp, %Z_rev : tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> * tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> ->tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+
+    clg.store %store_ptr, %out : !cliff.ptr<f32>, tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+    cliff.ret
+}

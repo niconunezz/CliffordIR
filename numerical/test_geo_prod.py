@@ -1,10 +1,11 @@
-from generate_oracle import generate_geo_prods_matrices, generate_rotate_matrices
+from generate_oracle import generate_geo_prods_matrices, generate_rotate_matrices, generate_rotate_appl_matrices
 import pytest
 import numpy as np
 import pycuda.driver as cuda
 import subprocess
 import random
 from clifford import Cl
+DEBUG = True
 
 layout, blades = Cl(2, 0, 1, firstIdx=0)
 e0 = blades['e0']
@@ -70,6 +71,18 @@ def to_mask(arr):
         if el != 0:
             out += 2**i
     return out
+
+def init_device(ptx, matrices, result, func_name):
+    mod  = cuda.module_from_buffer(ptx.encode())
+    # device init
+    
+    dev_matrices = [cuda.mem_alloc(m.nbytes) for m in matrices]
+    result_dev = cuda.mem_alloc(result.nbytes)
+    for dev_m, m in zip(dev_matrices, matrices) :  cuda.memcpy_htod(dev_m, m)
+
+    func = mod.get_function(func_name)
+    return func, dev_matrices, result_dev
+
 
 @pytest.fixture(scope="session", autouse=True)
 def cuda_ctx():
@@ -203,17 +216,12 @@ def test_geo_prod(case, cuda_ctx):
 
     expected = np.load("numerical/matrices/matrix_c.npz")['arr_0']
    
-    # device init
-    A_dev  = cuda.mem_alloc(A.nbytes)
-    B_dev = cuda.mem_alloc(B.nbytes)
-    result_dev = cuda.mem_alloc(result_host.nbytes)
-    cuda.memcpy_htod(A_dev, A)
-    cuda.memcpy_htod(B_dev, B)
 
     a_sample_coeffs = [random.randint(2, 399) for _ in range(comps_a)]
     b_sample_coeffs = [random.randint(2, 399) for _ in range(comps_b)]
     a_sample = mv_a(*a_sample_coeffs) ; b_sample = mv_b(*b_sample_coeffs)
     c_sample = (a_sample * b_sample)
+   
     mask_mv_a = to_mask(a_sample.as_array()[mask_perm])
     mask_mv_b = to_mask(b_sample.as_array()[mask_perm])
     mask_mv_c = to_mask(c_sample.as_array()[mask_perm])
@@ -223,10 +231,10 @@ def test_geo_prod(case, cuda_ctx):
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
-    
-    mod  = cuda.module_from_buffer(ptx.encode())
 
-    func = mod.get_function("geo_prod")
+    func, dev_matrices, result_dev = init_device(ptx, [A, B], result_host, "geo_prod")
+    A_dev, B_dev = dev_matrices
+
     func(A_dev, B_dev, result_dev,
      block=(N, 1, 1),
      grid=(1, 1, 1))
@@ -253,7 +261,6 @@ def test_rotate(case, cuda_ctx):
     generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
     result_host = np.zeros(N * comps_c, dtype=np.float32)
     
-
     A = np.load("numerical/matrices/rotation/matrix_a.npz")['arr_0']
     #! todo: study why this happens
     A = A.reshape(comps_a, N)[[0, 2, 1, 3]]
@@ -261,22 +268,15 @@ def test_rotate(case, cuda_ctx):
 
     expected = np.load("numerical/matrices/rotation/matrix_c.npz")['arr_0']
 
-    A_dev  = cuda.mem_alloc(A.nbytes)
-    B_dev = cuda.mem_alloc(B.nbytes)
-
-    result_dev = cuda.mem_alloc(result_host.nbytes)
-
-    cuda.memcpy_htod(A_dev, A)
-    cuda.memcpy_htod(B_dev, B)
-
     # generate ptx for case
     subprocess.run(["./numerical/compile_case.sh", str(0), str(0), str(0), "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
     
-    mod  = cuda.module_from_buffer(ptx.encode())
-    func = mod.get_function("rotation")
+    func, dev_matrices, result_dev = init_device(ptx, [A, B], result_host, "rotation")
+    A_dev, B_dev = dev_matrices 
+
     func(A_dev, B_dev, result_dev,
      block=(N, 1, 1),
      grid=(1, 1, 1))
@@ -285,3 +285,59 @@ def test_rotate(case, cuda_ctx):
 
     assert(np.allclose(result_host, expected, atol=1e-5))
     
+
+
+CASES_ROTATE_APPL = [
+    ("normal_case",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4),
+]
+
+@pytest.mark.parametrize("case", CASES_ROTATE_APPL, ids=["normal_case"])
+
+def test_rotate_appl(case, cuda_ctx):
+    N = 64
+    name , mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c = case
+
+    #todo: cache it if neccesary
+    generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c)
+    result_host = np.zeros(N * comps_c, dtype=np.float32)
+    
+    X = np.load("numerical/matrices/rotation_appl/matrix_x.npz")['arr_0']
+    Y = np.load("numerical/matrices/rotation_appl/matrix_y.npz")['arr_0']
+    #! todo: study why this happens
+    X = X.reshape(comps_x, N)[[0, 2, 1, 3]]
+    Y = Y.reshape(comps_y, N)[[0, 2, 1, 3]]
+
+    alpha = np.load("numerical/matrices/rotation_appl/matrix_alpha.npz")['arr_0']
+    expected = np.load("numerical/matrices/rotation_appl/matrix_c.npz")['arr_0']
+
+    # generate ptx for case
+    subprocess.run(["./numerical/compile_case.sh", str(0), str(0), str(0), "output.ptx"])
+
+    with open("output.ptx", "r") as f:
+        ptx = f.read()
+    
+    func, dev_matrices, result_dev = init_device(ptx, [X, Y, alpha], result_host, "complete_rotation")
+    X_dev, Y_dev, alpha_dev = dev_matrices 
+
+    func(X_dev, Y_dev, alpha_dev, result_dev,
+     block=(N, 1, 1),
+     grid=(1, 1, 1))
+    
+    cuda.memcpy_dtoh(result_host, result_dev)
+    if DEBUG:
+        if np.allclose(result_host, expected, atol=1e-5):
+            print("✓ CORRECTO")
+        else:
+            diff = np.where(~np.isclose(result_host, expected, atol=1e-5))
+            print(f"X outputs: {X.reshape(comps_x, N)[:, 0]}")
+            print(f"Y outputs: {Y.reshape(comps_y, N)[:, 0]}")
+            print(f"alpha outputs : {alpha.reshape(comps_alpha, N)[:, 0]}")
+            print(f"Kernel outcome : {result_host.reshape(comps_c, N)[:, 0]}")
+            print(f"Expected outcome : {expected.reshape(comps_c, N)[:, 0]}")
+            print(f"✗ INCORRECTO en {len(diff[0]) / (comps_c * N)} de los índices")
+            print(f"✗ INCORRECTO en índices: {diff}")
+
+            print(f"  got:      {result_host[diff]}")
+            print(f"  expected: {expected[diff]}")
+
+    assert(np.allclose(result_host, expected, atol=1e-5))

@@ -3,12 +3,7 @@ import random
 import math 
 
 def initialize_matrix(comps, N):
-    out = np.empty((comps, N), dtype=np.float32)
-    for j in range(N):
-        for i in range(comps):
-            out[i, j] = random.randint(1, 20)
-    
-    return out
+    return np.random.randint(1, 20, (comps, N)).astype(np.float32)
 
 
 def extract_geo_prod_comps(mv_a, mv_b, matrix_a, matrix_b, comps_c):
@@ -35,6 +30,10 @@ def geo_prod_reverse(mv_a, mv_b):
 
 def rotate(mv_a, mv_alpha):
     return math.e**(mv_alpha * mv_a)
+
+def complete_rotation(mv_x, mv_y, mv_alpha):
+    R = math.e**(mv_alpha*mv_x)
+    return R*mv_y*~R
 
 def generate_geo_prods_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
 
@@ -90,3 +89,39 @@ def generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
     np.savez("numerical/matrices/rotation/matrix_a", matrix_a.flatten())
     np.savez("numerical/matrices/rotation/matrix_b", matrix_b.flatten())
     np.savez("numerical/matrices/rotation/matrix_c", C.flatten())
+
+
+def generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c):
+
+    C = np.empty((comps_c, N), dtype=np.float32)
+    matrix_x = initialize_matrix(comps_x, N)
+    matrix_y = initialize_matrix(comps_y, N)
+
+    matrix_alpha = np.random.randn(comps_alpha, N).astype(np.float32)
+
+    for j in range(N):
+        mvx = mv_x(*matrix_x[:, j])
+        mvy = mv_y(*matrix_y[:, j])
+
+        mvalpha = mv_alpha(*matrix_alpha[:, j])
+        mv_out= complete_rotation(mvx, mvy, mvalpha)
+        vals = mv_out.value
+
+        coeffs = vals[[0, 4, 5, 6]]
+
+        if (j == 0):  print(f"mvx : {mvx}");  print(f"mvy : {mvy}") ; print(f"mvalpha : {mvalpha}") ;  print(f"out : {mv_out}")
+
+        for i in range(comps_c):
+            C[i, j] = coeffs[i]
+
+    # force euclidean point : x*e01 + y*e02 + e12 
+    matrix_x[0, :] = 0
+    matrix_x[3, :] = 1
+    
+    matrix_y[0, :] = 0
+    matrix_y[3, :] = 1
+
+    np.savez("numerical/matrices/rotation_appl/matrix_x", matrix_x.flatten())
+    np.savez("numerical/matrices/rotation_appl/matrix_y", matrix_y.flatten())
+    np.savez("numerical/matrices/rotation_appl/matrix_alpha", matrix_alpha.flatten())
+    np.savez("numerical/matrices/rotation_appl/matrix_c", C.flatten())
