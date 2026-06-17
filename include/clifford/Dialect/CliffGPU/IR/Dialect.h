@@ -19,6 +19,9 @@
 
 
 #include "clifford/Dialect/CliffGPU/IR/Dialect.h.inc"
+
+#include "clifford/Dialect/CliffGPU/IR/CliffGPUTypes.h"
+
 #define GET_ATTRDEF_CLASSES
 #include "clifford/Dialect/CliffGPU/IR/CliffGPUAttrDefs.h.inc"
 

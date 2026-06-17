@@ -9,6 +9,10 @@ mlir_tablegen(Dialect.h.inc -gen-dialect-decls)
 mlir_tablegen(Dialect.cpp.inc -gen-dialect-defs)
 add_mlir_doc(CliffGPUDialect CliffGPUDialect dialects/ -gen-dialect-doc)
 
+set(LLVM_TARGET_DEFINITIONS CliffGPUTypes.td)
+mlir_tablegen(CliffGPUTypes.h.inc -gen-typedef-decls)
+mlir_tablegen(CliffGPUTypes.cpp.inc -gen-typedef-defs)
+
 set(LLVM_TARGET_DEFINITIONS CliffGPUAttrDefs.td)
 mlir_tablegen(CliffGPUAttrDefs.h.inc -gen-attrdef-decls)
 mlir_tablegen(CliffGPUAttrDefs.cpp.inc -gen-attrdef-defs)

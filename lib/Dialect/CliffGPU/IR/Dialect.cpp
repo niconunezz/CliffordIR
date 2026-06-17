@@ -13,6 +13,9 @@
 using namespace mlir::clg;
 using namespace mlir::cliff;
 
+#define GET_TYPEDEF_CLASSES
+#include "clifford/Dialect/CliffGPU/IR/CliffGPUTypes.cpp.inc"
+
 using namespace mlir;
 using namespace llvm;
 
@@ -213,6 +216,10 @@ struct CliffGPUOpAsmDialectInterface : public OpAsmDialectInterface {
 
 void CliffGPUDialect::initialize() {
 
+    addTypes<
+    #define GET_TYPEDEF_LIST
+    #include "clifford/Dialect/CliffGPU/IR/CliffGPUTypes.cpp.inc"
+        >();
 
     addAttributes<
         #define GET_ATTRDEF_LIST
