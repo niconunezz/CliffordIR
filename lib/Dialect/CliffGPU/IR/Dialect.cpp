@@ -46,9 +46,7 @@ LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int32_t numWarps, 
     unsigned rank = shape.size();
     for (uint16_t i=0; i < rank; ++i)
         assert(shape[i] >= 32 && "Tensor shape must be at least 32 for each dimension");
-    SmallVector<unsigned> order(rank);
-    std::iota(order.begin(), order.end(), 0);
-    std::reverse(order.begin(), order.end());
+    assert(rank == 1 && "Only 1 dimensional matrices are supported for now");
 
     StringAttr kReg = StringAttr::get(ctx, "register");
     StringAttr kLane = StringAttr::get(ctx, "lane");
@@ -59,21 +57,14 @@ LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int32_t numWarps, 
     
     //todo : take this out, [] should be allowed
     auto ll = LinearLayout::zeros1D(2, kReg, outDims[0]); 
-    
-    //todo : generalize this to any number of dimensions
-    unsigned warpsPerRow = shape[order[0]] / threadsPerWarp;
-    
-    ll *= LinearLayout::identity1D(threadsPerWarp, kLane, outDims[0]);
-    ll *= LinearLayout::identity1D(warpsPerRow, kWarp, outDims[0]);
-    
-    if (rank == 2) {
-        unsigned warpsPerCol = numWarps/warpsPerRow;
-        unsigned numBlocks = shape[0] / warpsPerCol;
-    
-        ll *= LinearLayout::identity1D(warpsPerCol, kWarp, outDims[1]);
-        ll *= LinearLayout::identity1D(numBlocks, kBlock, outDims[1]);
 
-    }
+    //todo : generalize this to any number of dimensions
+    unsigned activeWarps = std::min((int32_t)(shape[0] / threadsPerWarp), numWarps);
+    unsigned numBlocks = shape[0] / (threadsPerWarp*numWarps);
+
+    ll *= LinearLayout::identity1D(threadsPerWarp, kLane, outDims[0]);
+    ll *= LinearLayout::identity1D(activeWarps, kWarp, outDims[0]);
+    ll *= LinearLayout::identity1D(numBlocks, kBlock, outDims[0]);
 
     return LinearEncodingAttr::get(ctx, ll);
 }
