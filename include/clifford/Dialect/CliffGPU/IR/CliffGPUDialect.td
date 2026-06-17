@@ -11,7 +11,7 @@ def CliffGPU_Dialect : Dialect {
 
     let description = "A dialect for clifford algebra gpu compute, for computer graphics or robotics";
     let cppNamespace = "::mlir::clg";
-    // let useDefaultTypePrinterParser = 1;
+    let useDefaultTypePrinterParser = 1;
     let useDefaultAttributePrinterParser = 1;
 }
 

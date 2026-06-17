@@ -17,7 +17,6 @@
 
 #include "clifford/Tools/LinearLayout.h"
 
-
 #include "clifford/Dialect/CliffGPU/IR/Dialect.h.inc"
 
 #include "clifford/Dialect/CliffGPU/IR/CliffGPUTypes.h"
