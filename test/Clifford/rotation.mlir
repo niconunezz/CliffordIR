@@ -17,21 +17,21 @@
 // CHECK: cliff.ret
 // CHECK-NOT: cliff.ret %
 
-cliff.func @rotation(%arg0 : tensor<64x!cliff.point<euclidean, true, #space>>,
-                    %arg1 : tensor<64x!cliff.point<euclidean, true, #space>>,
-                    %time : tensor<64x!cliff.scalar<#space>>,
-                    %store : tensor<64x!cliff.point<euclidean, true, #space>>) -> tensor<64x!cliff.point<euclidean, true, #space>> {
+cliff.func @rotation(%arg0 : tensor<1024x!cliff.point<euclidean, true, #space>>,
+                    %arg1 : tensor<1024x!cliff.point<euclidean, true, #space>>,
+                    %time : tensor<1024x!cliff.scalar<#space>>,
+                    %store : tensor<1024x!cliff.point<euclidean, true, #space>>) -> tensor<1024x!cliff.point<euclidean, true, #space>> {
 
     
-    %tmp = cliff.geo_prod %arg0, %time : 
-        tensor<64x!cliff.point<euclidean, true, #space>> * 
-        tensor<64x!cliff.scalar<#space>> -> tensor<64x!cliff.point<euclidean, true, #space>>
+    %tmp = cliff.geo_prod %time, %arg0 : 
+        tensor<1024x!cliff.scalar<#space>> * 
+        tensor<1024x!cliff.point<euclidean, true, #space>> -> tensor<1024x!cliff.point<euclidean, true, #space>>
 
-    %motor = cliff.exp %tmp : tensor<64x!cliff.point<euclidean, true, #space>> -> tensor<64x!cliff.motor<true, #space>>
+    %motor = cliff.exp %tmp : tensor<1024x!cliff.point<euclidean, true, #space>> -> tensor<1024x!cliff.motor<true, #space>>
 
     %out = cliff.sandwich %motor, %arg1 : 
-        tensor<64x!cliff.motor<true, #space>> *
-        tensor<64x!cliff.point<euclidean, true, #space>> -> tensor<64x!cliff.point<euclidean, true, #space>>
+        tensor<1024x!cliff.motor<true, #space>> *
+        tensor<1024x!cliff.point<euclidean, true, #space>> -> tensor<1024x!cliff.point<euclidean, true, #space>>
 
-    cliff.ret %out : tensor<64x!cliff.point<euclidean, true, #space>>
+    cliff.ret %out : tensor<1024x!cliff.point<euclidean, true, #space>>
 }

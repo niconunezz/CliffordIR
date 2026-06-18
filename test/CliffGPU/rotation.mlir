@@ -1,27 +1,32 @@
-#layout = #clg.linear<{register = [ [0]], lane = [ [1], [2], [4], [10], [16]], warp = [ [32], [64], [128]], block = [ [256], [512], [1024]]}>
+#layout = #clg.linear<{register = [], lane = [ [1], [2], [4], [8], [16]], warp = [[32]], block = []}>
 #space = #cliff.algebra<{p=2, q=0, r=1}>
+
 module {
   cliff.func @example(%arg0 : !cliff.ptr<f32>, 
                       %arg1 : !cliff.ptr<f32>, 
-                      %time : !cliff.ptr<f32>) -> tensor<64x!cliff.point<euclidean, true, #space>> {
+                      %y : !cliff.ptr<f32>,
+                      %pointer : !cliff.ptr<f32>) {
               
       
-      %t0 = cliff.load %arg0 : !cliff.ptr<f32> -> tensor<64x!cliff.point<euclidean, true, #space>, #layout>
-      %t1 = cliff.load %arg1 : !cliff.ptr<f32> -> tensor<64x!cliff.point<euclidean, true, #space>, #layout>
-      %t2 = cliff.load %time : !cliff.ptr<f32> -> tensor<64x!cliff.scalar<#space>, #layout>
+      %t0 = clg.load %arg0 : !cliff.ptr<f32> -> tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
+      %t1 = clg.load %arg1 : !cliff.ptr<f32> -> tensor<64x!cliff.multivector<1, unknown, f32, #space>, #layout>
+      %ty = clg.load %y : !cliff.ptr<f32> -> tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout>
 
-      %tmp = cliff.geo_prod %t0, %t2 : 
-          tensor<64x!cliff.point<euclidean, true, #space>, #layout> * 
-          tensor<64x!cliff.scalar<#space>, #layout> -> tensor<64x!cliff.point<euclidean, true, #space>, #layout>
+      %motor = cliff.rotate %t0, %t1 :
+        tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> *
+        tensor<64x!cliff.multivector<1, unknown, f32, #space>, #layout> ->
+        tensor<64x!cliff.multivector<113, unknown, f32, #space>, #layout>
+      
 
-      %motor = cliff.exp %tmp : tensor<64x!cliff.point<euclidean, true, #space>, #layout> -> tensor<64x!cliff.motor<true, #space>, #layout>
+      %2 = cliff.geo_prod %motor, %ty : tensor<64x!cliff.multivector<113, unknown, f32, #space>, #layout> * tensor<64x!cliff.multivector<105, unknown, f32, #space>, #layout> ->
+                                        tensor<64x32x!cliff.multivector<255,  unknown, f32, #space>, #layout>
 
-      %out = cliff.sandwich %motor, %t1 : 
-          tensor<64x!cliff.motor<true, #space>, #layout> *
-          tensor<64x!cliff.point<euclidean, true, #space>, #layout> -> tensor<64x!cliff.point<euclidean, true, #space>, #layout>
-          
+      %3 = cliff.reverse %motor : tensor<64x!cliff.multivector<113, unknown, f32, #space>, #layout> -> tensor<64x!cliff.multivector<113, unknown, f32, #space>, #layout>
+      %out = cliff.geo_prod %2, %3 : tensor<64x32x!cliff.multivector<255,  unknown, f32, #space>, #layout> * tensor<64x!cliff.multivector<113, unknown, f32, #space>, #layout> ->
+                                  tensor<64x32x!cliff.multivector<255,  unknown, f32, #space>, #layout>
 
-      cliff.ret %out : tensor<64x!cliff.point<euclidean, true, #space>, #layout>
+      clg.store %pointer, %out : !cliff.ptr<f32>, tensor<64x32x!cliff.multivector<255,  unknown, f32, #space>, #layout>
+      cliff.ret 
   }
 
 }

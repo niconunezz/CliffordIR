@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 DEBUG = True
+N = 4096
 
 layout, blades = Cl(2, 0, 1, firstIdx=0)
 e0 = blades['e0']
@@ -36,9 +37,10 @@ def init_device(ptx, matrices, result, func_name):
     return func, dev_matrices, result_dev
 
 def test_rotate_appl():
-    N = 64
     cuda.init()
     ctx = cuda.Device(0).make_context()
+    num_blocks = max(N//256, 1)
+    num_threads = min(N, 1024)
 
     mv_x = mv_point
     mv_y = mv_point
@@ -67,7 +69,7 @@ def test_rotate_appl():
     X = X.reshape(comps_x, N)[[0, 2, 1, 3]]
     Y = Y.reshape(comps_y, N)[[0, 2, 1, 3]]
 
-    alpha = np.linspace(0, np.pi, 64).reshape(1, 64).astype(np.float32)
+    alpha = np.linspace(0, np.pi, N).reshape(1, N).astype(np.float32)
 
     # generate ptx for case
     # subprocess.run(["./numerical/compile_case.sh", str(0), str(0), str(0), "output.ptx"])
@@ -75,12 +77,12 @@ def test_rotate_appl():
     with open("output.ptx", "r") as f:
         ptx = f.read()
     
-    func, dev_matrices, result_dev = init_device(ptx, [X, Y, alpha], result_host, "complete_rotation")
+    func, dev_matrices, result_dev = init_device(ptx, [X, Y, alpha], result_host, "rotation")
     X_dev, Y_dev, alpha_dev = dev_matrices 
 
     func(X_dev, Y_dev, alpha_dev, result_dev,
-     block=(N, 1, 1),
-     grid=(1, 1, 1))
+     block=(num_threads, 1, 1),
+     grid=(num_blocks, 1, 1))
     
     cuda.memcpy_dtoh(result_host, result_dev)
 
@@ -95,18 +97,17 @@ from matplotlib.animation import FuncAnimation
 if __name__ == '__main__':
 
     xx = (1, 0)
-
-    rotated_points = test_rotate_appl().reshape(4, 64)
+    rotated_points = test_rotate_appl().reshape(4, N)
 
     out_pts = []
-    for i in range(64):
+    for i in range(N):
         pt = mv_point(0, rotated_points[1, i], rotated_points[2, i], 1).value
         w = pt[-2]
         x = pt[-3] / w
         y = pt[-4] / w
         out_pts.append((x, y))
 
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(6, 6), dpi=80)
 
     xs = [p[0] for p in out_pts]
     ys = [p[1] for p in out_pts]
@@ -138,8 +139,7 @@ if __name__ == '__main__':
         fig,
         update,
         frames=len(out_pts),
-        interval=50,
-        blit=False
+        interval=5,
+        blit=True
     )
-
-    ani.save("rotation.gif", writer="pillow", fps=20)
+    ani.save("rotation.gif", writer="ffmpeg", fps=60)

@@ -190,7 +190,6 @@ CASES = [
 @pytest.mark.parametrize("case", CASES, ids=[c[0] for c in CASES])
 def test_geo_prod(case, cuda_ctx):
     N = 64
-    print("running")
     name, mv_a, mv_b, comps_a, comps_b, comps_c = case
     #todo: cache it if neccesary
     c_default_indices, a_default_indices, b_default_indices = generate_geo_prods_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
@@ -227,7 +226,7 @@ def test_geo_prod(case, cuda_ctx):
     mask_mv_c = to_mask(c_sample.as_array()[mask_perm])
 
     # generate ptx for case
-    subprocess.run(["./numerical/compile_case.sh", str(mask_mv_a), str(mask_mv_b), str(mask_mv_c), "output.ptx"])
+    subprocess.run(["./numerical/scripts/compile_case.sh", str(mask_mv_a), str(mask_mv_b), str(mask_mv_c), "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
@@ -269,7 +268,7 @@ def test_rotate(case, cuda_ctx):
     expected = np.load("numerical/matrices/rotation/matrix_c.npz")['arr_0']
 
     # generate ptx for case
-    subprocess.run(["./numerical/compile_case.sh", str(0), str(0), str(0), "output.ptx"])
+    subprocess.run(["./numerical/scripts/compile_case.sh", str(0), str(0), str(0), "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
@@ -288,15 +287,22 @@ def test_rotate(case, cuda_ctx):
 
 
 CASES_ROTATE_APPL = [
-    ("normal_case",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4),
+    ("N64",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 64),
+    ("N128",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 128),
+    ("N256",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 256),
+    ("N512",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 512),
+    ("N1024",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 1024),
+    ("N2048",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 2048),
+    ("N4096",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 4096),
+    ("N8192",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 8192),
+
 ]
 
-@pytest.mark.parametrize("case", CASES_ROTATE_APPL, ids=["normal_case"])
-
+@pytest.mark.parametrize("case", CASES_ROTATE_APPL, ids=[c[0] for c in CASES_ROTATE_APPL])
 def test_rotate_appl(case, cuda_ctx):
-    N = 64
-    name , mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c = case
-
+    name , mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c, N = case
+    num_blocks = max(N//256, 1)
+    num_threads = min(N, 1024)
     #todo: cache it if neccesary
     generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c)
     result_host = np.zeros(N * comps_c, dtype=np.float32)
@@ -311,17 +317,19 @@ def test_rotate_appl(case, cuda_ctx):
     expected = np.load("numerical/matrices/rotation_appl/matrix_c.npz")['arr_0']
 
     # generate ptx for case
-    subprocess.run(["./numerical/compile_case.sh", str(0), str(0), str(0), "output.ptx"])
+    subprocess.run(["./numerical/scripts/compile_end_to_end.sh", str(N), "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
     
-    func, dev_matrices, result_dev = init_device(ptx, [X, Y, alpha], result_host, "complete_rotation")
+    func, dev_matrices, result_dev = init_device(ptx, [X, Y, alpha], result_host, "rotation")
     X_dev, Y_dev, alpha_dev = dev_matrices 
+    print(f"N : {N}")
+    print(f"Num_blocks : {num_blocks}")
 
     func(X_dev, Y_dev, alpha_dev, result_dev,
-     block=(N, 1, 1),
-     grid=(1, 1, 1))
+     block=(num_threads, 1, 1),
+     grid=(num_blocks, 1, 1))
     
     cuda.memcpy_dtoh(result_host, result_dev)
     if DEBUG:
