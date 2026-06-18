@@ -33,7 +33,7 @@ CliffGPUToLLVMTypeConverter::CliffGPUToLLVMTypeConverter(MLIRContext *ctx) : con
         return LLVM::LLVMStructType::getLiteral(ctx, types);
     });
 
-    addConversion([&](cliff::Cliff_PointerType pointer) {
+    addConversion([&](clg::CLG_PointerType pointer) {
         auto ctx = pointer.getContext();
         return LLVM::LLVMPointerType::get(ctx, 0);
     });
