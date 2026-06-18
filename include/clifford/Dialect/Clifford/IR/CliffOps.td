@@ -130,8 +130,8 @@ def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
 def Cliff_Translate : Cliff_Op<"translate", [Pure]> {
     let summary = "Translate a point";
 
-    let arguments = (ins Cliff_MultivctTensor:$dist, Cliff_MultivctTensor:$src);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$dist, Cliff_GeometricKindTensor:$src);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$src `,` $dist attr-dict `:` type($src) `*` type($dist) `->` type($out)";
 }
@@ -139,8 +139,8 @@ def Cliff_Translate : Cliff_Op<"translate", [Pure]> {
 def Cliff_Rotate : Cliff_Op<"rotate", [Pure]> {
     let summary = "Rotate a point";
 
-    let arguments = (ins Cliff_MultivctTensor:$angle, Cliff_MultivctTensor:$src);
-    let results = (outs Cliff_MultivctTensor:$out);
+    let arguments = (ins Cliff_GeometricKindTensor:$angle, Cliff_GeometricKindTensor:$src);
+    let results = (outs Cliff_GeometricKindTensor:$out);
 
     let assemblyFormat = "$src `,` $angle attr-dict `:` type($src) `*` type($angle) `->` type($out)";
     let hasVerifier = 1;

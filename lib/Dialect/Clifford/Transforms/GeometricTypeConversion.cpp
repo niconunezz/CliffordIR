@@ -155,6 +155,9 @@ void populateGeometricTypeConversionPattern(TypeConverter &typeConverter, Rewrit
                     GenericOpPattern<ReturnOp>,
                     GenericOpPattern<GeoProd>,
                     GenericOpPattern<Sandwich>,
+                    GenericOpPattern<Rotate>,
+                    GenericOpPattern<Translate>,
+                    GenericOpPattern<Reverse>,
                     GenericOpPattern<Exp>
                     >(typeConverter, context);
 }
