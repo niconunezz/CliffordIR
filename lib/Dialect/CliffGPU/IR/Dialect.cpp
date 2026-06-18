@@ -54,13 +54,14 @@ LinearEncodingAttr getDefaultGlobalEncoding(MLIRContext *ctx, int32_t numWarps, 
     StringAttr kBlock = StringAttr::get(ctx, "block");
 
     ArrayRef<StringAttr> outDims = getStandardOutDims(ctx, rank);
-    
-    //todo : take this out, [] should be allowed
-    auto ll = LinearLayout::zeros1D(2, kReg, outDims[0]); 
+
+    auto ll = LinearLayout::empty(); 
+    ll *= LinearLayout::identity1D(1, kReg, outDims[0]);
+
 
     //todo : generalize this to any number of dimensions
-    unsigned activeWarps = std::min((int32_t)(shape[0] / threadsPerWarp), numWarps);
-    unsigned numBlocks = shape[0] / (threadsPerWarp*numWarps);
+    unsigned activeWarps = std::max(std::min((int32_t)(shape[0] / threadsPerWarp), numWarps), 1);
+    unsigned numBlocks = std::max((int32_t)(shape[0]) / (threadsPerWarp*numWarps), 1);
 
     ll *= LinearLayout::identity1D(threadsPerWarp, kLane, outDims[0]);
     ll *= LinearLayout::identity1D(activeWarps, kWarp, outDims[0]);
