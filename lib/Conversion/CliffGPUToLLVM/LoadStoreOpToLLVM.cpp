@@ -46,6 +46,8 @@ public:
             NVVM::ThreadIdXOp::create(rewriter, loc,
                                       rewriter.getI32Type());
 
+        Value blockDim = NVVM::BlockDimXOp::create(rewriter, loc, rewriter.getI32Type());
+
         Value blockId =
             NVVM::BlockIdXOp::create(rewriter, loc,
                                      rewriter.getI32Type());
@@ -168,7 +170,7 @@ public:
         auto kBlock = StringAttr::get(ctx, "block");
 
         // compile-time known block dimension
-        Value blockDim = b.i32_val(ll.getInDimSize(kBlock));
+        Value blockDim = NVVM::BlockDimXOp::create(rewriter, loc, rewriter.getI32Type());
 
         Value c31 = b.i32_val(31);
         Value c5 = b.i32_val(5);
