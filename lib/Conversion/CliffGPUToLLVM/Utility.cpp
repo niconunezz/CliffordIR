@@ -214,7 +214,7 @@ namespace mlir::clg {
             uint32_t outerIdx = 0;
             
             for (auto &[inDimName, values] : outDimIdxToPerDimValues[outDimIdx]) {
-                x[outerIdx].dump();
+                // x[outerIdx].dump();
                 auto numValues = layout.getInDimSizeLog2(inDimName);
                 for (auto &val : values) {
                     Value activeBit = b.and_(x[outerIdx], b.i32_val(1 << (numValues-shifts[outerIdx])));
