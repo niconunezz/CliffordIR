@@ -57,9 +57,6 @@ public:
         auto kWarp = StringAttr::get(ctx, "warp");
         auto kBlock = StringAttr::get(ctx, "block");
 
-        // compile-time known block dimension
-        Value blockDim = b.i32_val(ll.getInDimSize(kBlock));
-
         Value c31 = b.i32_val(31);
         Value c5 = b.i32_val(5);
         Value zero = b.i32_val(0);
@@ -86,13 +83,17 @@ public:
             blockId
         };
 
-        // i, j
-        SmallVector<Value> logicalIndices =
-            computeIndices(loc,
-                           ll,
-                           inputCoords,
-                           rewriter);
+        // SmallVector<Value> logicalIndices =
+        //     computeIndices(loc,
+        //                    ll,
+        //                    inputCoords,
+        //                    rewriter);
 
+
+        Value tmp = b.mul(blockId, blockDim);
+        Value idx = b.add(tmp, threadId);
+        SmallVector<Value> logicalIndices;
+        logicalIndices.push_back(idx);
 
         Value linearOffset = b.i32_val(0);
         Value stride = b.i32_val(1);
@@ -199,11 +200,16 @@ public:
         };
 
         // i, j
-        SmallVector<Value> logicalIndices =
-            computeIndices(loc,
-                           ll,
-                           inputCoords,
-                           rewriter);
+        // SmallVector<Value> logicalIndices =
+        //     computeIndices(loc,
+        //                    ll,
+        //                    inputCoords,
+        //                    rewriter);
+
+        Value tmp = b.mul(blockId, blockDim);
+        Value idx = b.add(tmp, threadId);
+        SmallVector<Value> logicalIndices;
+        logicalIndices.push_back(idx);
 
 
         Value linearOffset = b.i32_val(0);
