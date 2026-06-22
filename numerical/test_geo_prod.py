@@ -280,7 +280,7 @@ def test_rotate(case, cuda_ctx):
     expected = np.load("numerical/matrices/rotation/matrix_c.npz")['arr_0']
 
     # generate ptx for case
-    subprocess.run(["./numerical/scripts/compile_case.sh", str(0), str(0), str(0), "output.ptx"])
+    subprocess.run(["./numerical/scripts/compile_rotation.sh", "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
