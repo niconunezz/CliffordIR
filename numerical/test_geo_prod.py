@@ -83,6 +83,30 @@ def init_device(ptx, matrices, result, func_name):
     func = mod.get_function(func_name)
     return func, dev_matrices, result_dev
 
+import math
+def generate_layout(N: int, els_per_thread: int) -> str:
+    assert N >= 32, "N must be at least 32"
+
+    def dim_entries(count: int, start: int) -> tuple[str, int]:
+        if count <= 1:
+            return "[]", start
+        steps = int(math.log2(count))
+        entries = [f"[{start << k}]" for k in range(steps)]
+        return "[" + ", ".join(entries) + "]", start << steps
+
+    i = 1
+    total_threads = N // els_per_thread
+
+    register,  i = dim_entries(els_per_thread, i)
+    lane,      i = dim_entries(min(total_threads, 32), i)
+    warp,      i = dim_entries(min(8, total_threads // 32), i)
+    block,     i = dim_entries(total_threads // 256, i)
+
+    return f"{{register = {register}, lane = {lane}, warp = {warp}, block = {block}}}"
+
+
+
+
 
 @pytest.fixture(scope="session", autouse=True)
 def cuda_ctx():
@@ -93,106 +117,80 @@ def cuda_ctx():
     ctx.pop()
 
 CASES = [
-    # ── originales ────────────────────────────────────────────────────────────
-    ("e12__e12",       mve12,    mve12,    2, 2, 2),
-    ("e02__e02",       mve02,    mve02,    2, 2, 2),
-    ("e01__e01",       mve01,    mve01,    2, 2, 2),
-    ("e01e02__e01e02", mve01e02, mve01e02, 3, 3, 3),
-    ("e01e12__e01e12", mve01e12, mve01e12, 3, 3, 4),
-    ("e02e12__e02e12", mve02e12, mve02e12, 3, 3, 4),
-    ("e1e12__e0e01",   mve1e12,  mve0e01,  3, 3, 7),
-    ("full__full",     mvfull,   mvfull,   4, 4, 4),
-    ("scalar__full",   lambda a: a*e1*e1,  mvfull, 1, 4, 4),
-    ("full__scalar",   mvfull,  lambda a: a*e1*e1, 4, 1, 4),
-    ("complete__complete", mve0e1e2e01e02e12e012, mve0e1e2e01e02e12e012, 8, 8, 8),
+    ("e12__e12",       mve12,    mve12,    2, 2, 2, 128, 1),
+    ("e12__e12",       mve12,    mve12,    2, 2, 2, 4096, 16),
+    ("e02__e02",       mve02,    mve02,    2, 2, 2, 64, 1),
+    ("e01__e01",       mve01,    mve01,    2, 2, 2, 128, 4),
+    ("e01e02__e01e02", mve01e02, mve01e02, 3, 3, 3, 64, 1),
+    ("e01e12__e01e12", mve01e12, mve01e12, 3, 3, 4, 64, 1),
+    ("e02e12__e02e12", mve02e12, mve02e12, 3, 3, 4, 4096, 4),
+    ("e1e12__e0e01",   mve1e12,  mve0e01,  3, 3, 7, 64, 1),
+    ("full__full",     mvfull,   mvfull,   4, 4, 4, 128, 4),
+    ("scalar__full",   lambda a: a*e1*e1,  mvfull, 1, 4, 4, 64, 1),
+    ("full__scalar",   mvfull,  lambda a: a*e1*e1, 4, 1, 4, 64, 1),
+    ("complete__complete", mve0e1e2e01e02e12e012, mve0e1e2e01e02e12e012, 8, 8, 8, 128, 1),
 
-    # ── vectores puros (grado 1) ──────────────────────────────────────────────
-    # e0²=0 → el producto de e0 consigo mismo anula el escalar
-    ("e0__e0",         mve0,     mve0,     2, 2, 2),
-    # e1²=+1 en PGA 2D con métrica (+,-,-,0)
-    ("e1__e1",         mve1,     mve1,     2, 2, 2),
-    ("e2__e2",         mve2,     mve2,     2, 2, 2),
-    # producto cruzado de vectores distintos → resultado grado 0+2
-    ("e0__e1",         mve0,     mve1,     2, 2, 4),
-    ("e1__e2",         mve1,     mve2,     2, 2, 4),
-    ("e0__e2",         mve0,     mve2,     2, 2, 4),
-    # vector 2-componente × vector 2-componente — máximo cross-grade
-    ("e0e1__e0e2",     mve0e1,   mve0e2,   3, 3, 7),
-    ("e0e1__e1e2",     mve0e1,   mve1e2,   3, 3, 7),
-    ("e0e2__e1e2",     mve0e2,   mve1e2,   3, 3, 7),
-    # vector completo × vector completo — todos los grados impares/pares
-    ("e0e1e2__e0e1e2", mve0e1e2, mve0e1e2, 4, 4, 7),
+    ("e0__e0",         mve0,     mve0,     2, 2, 2, 64, 1),
+    ("e1__e1",         mve1,     mve1,     2, 2, 2, 64, 1),
+    ("e2__e2",         mve2,     mve2,     2, 2, 2, 64, 2),
+    ("e0__e1",         mve0,     mve1,     2, 2, 4, 4096, 16),
+    ("e1__e2",         mve1,     mve2,     2, 2, 4, 512, 4),
+    ("e0__e2",         mve0,     mve2,     2, 2, 4, 128, 1),
+    ("e0e1__e0e2",     mve0e1,   mve0e2,   3, 3, 7, 64, 2),
+    ("e0e1__e1e2",     mve0e1,   mve1e2,   3, 3, 7, 8192, 4),
+    ("e0e2__e1e2",     mve0e2,   mve1e2,   3, 3, 7, 4096, 4),
+    ("e0e1e2__e0e1e2", mve0e1e2, mve0e1e2, 4, 4, 7, 512, 2),
+    ("e0__e01",        mve0,     mve01,    2, 2, 3, 1024, 8),
+    ("e1__e12",        mve1,     mve12,    2, 2, 4, 32, 1),
+    ("e2__e02",        mve2,     mve02,    2, 2, 4, 64, 1),
+    ("e0e1__e12",      mve0e1,   mve12,    3, 2, 6, 64, 1),
+    ("e0e2__e12",      mve0e2,   mve12,    3, 2, 6, 64, 2),
+    ("e1e2__e12",      mve1e2,   mve12,    3, 2, 4, 4096, 1),
+    ("e0e1e2__full",   mve0e1e2, mvfull,   4, 4, 8, 64, 2),
+    ("e12__e1",        mve12,    mve1,     2, 2, 4, 64, 1),
+    ("e01__e0",        mve01,    mve0,     2, 2, 3, 512, 8),
+    ("full__e0e1e2",   mvfull,   mve0e1e2, 4, 4, 8, 4096, 1),
 
-    # ── vector × bivector (grado 1 × grado 2) ────────────────────────────────
-    # e0 × e01 = e0*e01 — e0²=0 cancela término, resultado grado 1
-    ("e0__e01",        mve0,     mve01,    2, 2, 3),
-    # e1 × e12 → mezcla grado 1 y escalar
-    ("e1__e12",        mve1,     mve12,    2, 2, 4),
-    # e2 × e02 → e2*e02 tiene e2²≠0
-    ("e2__e02",        mve2,     mve02,    2, 2, 4),
-    # vector 2-comp × e12 — ejercita todos los productos ei*e12
-    ("e0e1__e12",      mve0e1,   mve12,    3, 2, 6),
-    ("e0e2__e12",      mve0e2,   mve12,    3, 2, 6),
-    ("e1e2__e12",      mve1e2,   mve12,    3, 2, 4),
-    # full vector × bivector completo
-    ("e0e1e2__full",   mve0e1e2, mvfull,   4, 4, 8),
+    ("e012__scalar",   mve012,   lambda a: a*e1*e1, 2, 1, 2, 64, 1),
+    ("e012__e012",     mve012,   mve012,   2, 2, 2, 64, 1),
+    ("e012__e0",       mve012,   mve0,     2, 2, 3, 64, 1),
+    ("e012__e1",       mve012,   mve1,     2, 2, 4, 64, 1),
+    ("e012__e0e1e2",   mve012,   mve0e1e2, 2, 4, 7, 512, 1),
+    ("e012__e01",      mve012,   mve01,    2, 2, 3, 1024, 8),
+    ("e012__e12",      mve012,   mve12,    2, 2, 4, 8192, 1),
+    ("e012__full",     mve012,   mvfull,   2, 4, 6, 64, 1),
 
-    # ── bivector × vector (grado 2 × grado 1) ────────────────────────────────
-    # anti-commutativity check: mismo caso que arriba pero operandos girados
-    ("e12__e1",        mve12,    mve1,     2, 2, 4),
-    ("e01__e0",        mve01,    mve0,     2, 2, 3),
-    ("full__e0e1e2",   mvfull,   mve0e1e2, 4, 4, 8),
+    ("e01e012__e01e012",     mve01e012, mve01e012,    3, 3, 3, 512, 1),
+    ("e12e012__e12e012",     mve12e012, mve12e012,    3, 3, 4, 64, 1),
+    ("full_e012__full_e012", mvfull_e012, mvfull_e012, 5, 5, 6, 64, 1),
+    ("e0e1e2__e01e02e012",   mve0e1e2,  mve01e02e012, 4, 4, 7, 64, 1),
 
-    # ── pseudoescalar e012 ────────────────────────────────────────────────────
-    # e012 × escalar = escalar × e012
-    ("e012__scalar",   mve012,   lambda a: a*e1*e1, 2, 1, 2),
-    # e012 × e012 — en PGA 2D, e012² = 0 (degeneración métrica)
-    ("e012__e012",     mve012,   mve012,   2, 2, 2),
-    # e012 × vector
-    ("e012__e0",       mve012,   mve0,     2, 2, 3),
-    ("e012__e1",       mve012,   mve1,     2, 2, 4),
-    ("e012__e0e1e2",   mve012,   mve0e1e2, 2, 4, 7),
-    # e012 × bivector
-    ("e012__e01",      mve012,   mve01,    2, 2, 3),
-    ("e012__e12",      mve012,   mve12,    2, 2, 4),
-    ("e012__full",     mve012,   mvfull,   2, 4, 6),
+    ("e0e012__e0e012",   mve0e012, mve0e012, 3, 3, 3, 64, 1),
+    ("e1e012__e1e012",   mve1e012, mve1e012, 3, 3, 4, 512, 1),
+    ("e0e012__full",     mve0e012, mvfull,   3, 4, 6, 4096, 4),
+    ("e1e012__full",     mve1e012, mvfull,   3, 4, 8, 8192, 1),
 
-    # ── grado 2+3 (bivector + pseudoescalar) ─────────────────────────────────
-    ("e01e012__e01e012",     mve01e012, mve01e012,    3, 3, 3),
-    ("e12e012__e12e012",     mve12e012, mve12e012,    3, 3, 4),
-    # mezcla: bivector completo + e012
-    ("full_e012__full_e012", mvfull_e012, mvfull_e012, 5, 5, 6),
-    # asimétrico: vector × (bivector+pseudoescalar)
-    ("e0e1e2__e01e02e012",   mve0e1e2,  mve01e02e012, 4, 4, 7),
-
-    # ── grado 1+3 (vector + pseudoescalar) ───────────────────────────────────
-    ("e0e012__e0e012",   mve0e012, mve0e012, 3, 3, 3),
-    ("e1e012__e1e012",   mve1e012, mve1e012, 3, 3, 4),
-    # vector+e012 × bivector completo
-    ("e0e012__full",     mve0e012, mvfull,   3, 4, 6),
-    ("e1e012__full",     mve1e012, mvfull,   3, 4, 8),
-
-    # ── casos mixtos grado 1+2 ────────────────────────────────────────────────
-    # mve0e12: e0 (ideal) + e12 (rotación) — combinación geométricamente relevante
-    ("e0e12__e0e12",         mve0e12,   mve0e12,   3, 3, 4),
-    ("e0e12__full",          mve0e12,   mvfull,    3, 4, 6),
-    ("e1e01__e1e01",         mve1e01,   mve1e01,   3, 3, 4),
-    ("e1e02__e2e01",         mve1e02,   mve2e01,   3, 3, 7),
-    ("e0e1e01__e0e1e01",     mve0e1e01, mve0e1e01, 4, 4, 4),
-    ("e0e1e12__e1e2e12",     mve0e1e12, mve1e2e12, 4, 4, 8),
-    # full vector (grado 1) × full bivector (grado 2) — producto máximo sin e012
-    ("e0e1e2__e01e02e12",    mve0e1e2,  mvfull,    4, 4, 8),
+    ("e0e12__e0e12",         mve0e12,   mve0e12,   3, 3, 4, 512, 1),
+    ("e0e12__full",          mve0e12,   mvfull,    3, 4, 6, 8192, 1),
+    ("e1e01__e1e01",         mve1e01,   mve1e01,   3, 3, 4, 4096, 1),
+    ("e1e02__e2e01",         mve1e02,   mve2e01,   3, 3, 7, 32, 1),
+    ("e0e1e01__e0e1e01",     mve0e1e01, mve0e1e01, 4, 4, 4, 512, 1),
+    ("e0e1e12__e1e2e12",     mve0e1e12, mve1e2e12, 4, 4, 8, 128, 4),
+    ("e0e1e2__e01e02e12",    mve0e1e2,  mvfull,    4, 4, 8, 4096, 1),
 ]
-
-
 
 
 @pytest.mark.parametrize("case", CASES, ids=[c[0] for c in CASES])
 def test_geo_prod(case, cuda_ctx):
-    N = 64
-    name, mv_a, mv_b, comps_a, comps_b, comps_c = case
+    name, mv_a, mv_b, comps_a, comps_b, comps_c, N, els_per_thread = case
+
+    layout = generate_layout(N, els_per_thread)
+    total_threads = N // els_per_thread
+    num_blocks = max(total_threads//(256), 1)
+    num_threads = min(total_threads, 256)
+
     #todo: cache it if neccesary
-    c_default_indices, a_default_indices, b_default_indices = generate_geo_prods_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
+    c_default_indices, a_default_indices, b_default_indices= generate_geo_prods_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
     result_host = np.zeros(N * comps_c, dtype=np.float32)
     
     mask_perm = [0, 1, 2, 4, 3, 5, 6, 7]
@@ -235,14 +233,28 @@ def test_geo_prod(case, cuda_ctx):
     A_dev, B_dev = dev_matrices
 
     func(A_dev, B_dev, result_dev,
-     block=(N, 1, 1),
-     grid=(1, 1, 1))
+     block=(num_threads, 1, 1),
+     grid=(num_blocks, 1, 1))
     
     cuda.memcpy_dtoh(result_host, result_dev)
     
     # change from bitmap layout -> canonical 
     result_host = result_host.reshape(comps_c, N)[adapted_mask_c, :]
     result_host = result_host.flatten()
+    if DEBUG:
+        if np.allclose(result_host, expected, atol=1e-4):
+            print("✓ CORRECTO")
+        else:
+            diff = np.where(~np.isclose(result_host, expected, atol=1e-4))
+            print(f"A outputs: {A.reshape(comps_a, N)[:, 0]}")
+            print(f"B outputs : {B.reshape(comps_b, N)[:, 0]}")
+            print(f"Kernel outcome : {result_host.reshape(comps_c, N)[:, 0]}")
+            print(f"Expected outcome : {expected.reshape(comps_c, N)[:, 0]}")
+            print(f"✗ INCORRECTO en {len(diff[0]) / (comps_c * N)} de los índices")
+            print(f"✗ INCORRECTO en índices: {diff}")
+
+            print(f"  got:      {result_host[diff]}")
+            print(f"  expected: {expected[diff]}")
 
     assert(np.allclose(result_host, expected, atol=1e-5))
 

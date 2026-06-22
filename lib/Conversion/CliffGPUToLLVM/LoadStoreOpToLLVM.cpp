@@ -88,39 +88,44 @@ public:
         //                    ll,
         //                    inputCoords,
         //                    rewriter);
+        int32_t registerDims =
+            std::max(ll.getInDimSize(kReg), 1);
 
 
-        Value tmp = b.mul(blockId, blockDim);
-        Value idx = b.add(tmp, threadId);
-        SmallVector<Value> logicalIndices;
-        logicalIndices.push_back(idx);
+        Value warpBase = b.add(
+            b.add(
+                b.mul(blockId, b.mul(blockDim, b.i32_val(registerDims))),
+                b.mul(warpId, b.i32_val(32 * registerDims))
+            ),
+            laneId
+        );
+        
+        assert((outShape[0] % 32 == 0) && "4now shapes should be multiples of 32");
+        SmallVector<Value> globalRes;
+        for (uint32_t regIdx = 0; regIdx < registerDims; ++regIdx) {
+            Value regOffset = b.add(warpBase, b.mul(b.i32_val(regIdx), b.i32_val(32)));
 
-        Value linearOffset = b.i32_val(0);
-        Value stride = b.i32_val(1);
-        for (size_t i = 0; i < logicalIndices.size(); ++i) {
-            Value contrib = b.mul(stride, logicalIndices[i]);
-            linearOffset = b.add(linearOffset, contrib);
-        };
+            SmallVector<Value> res;
+            for (uint32_t compIdx = 0; compIdx < activeComps; ++compIdx) {
+                Value compOffset = b.add(regOffset, b.mul(b.i32_val(outShape[0]), b.i32_val(compIdx)));
+                
+                ValueRange values(compOffset);
+                Value address =
+                    b.gep(LLVM::LLVMPointerType::get(ctx),
+                        rewriter.getF32Type(),
+                        llPointer,
+                        values);
 
-        SmallVector<Value> res;
-        for (uint32_t compIdx = 0; compIdx < activeComps; ++compIdx) {
-            Value compOffset = b.add(linearOffset, b.mul(b.i32_val(outShape[0]), b.i32_val(compIdx)));
-            ValueRange values(compOffset);
-            Value address =
-                b.gep(LLVM::LLVMPointerType::get(ctx),
-                      rewriter.getF32Type(),
-                      llPointer,
-                      values);
-
-            // todo: change once we allow more dtypes
-            auto resTy = rewriter.getF32Type();
-            Value compLoad = b.load(resTy, address);
-            res.push_back(compLoad);
+                // todo: change once we allow more dtypes
+                auto resTy = rewriter.getF32Type();
+                Value compLoad = b.load(resTy, address);
+                res.push_back(compLoad);
+            }
+            Value packedRes = packElements(loc, res, typeConverter, rewriter, mv);
+            globalRes.push_back(packedRes);
         }
         
-        Value packedRes = packElements(loc, res, typeConverter, rewriter, mv);
-        //todo: generalize to reg != []
-        Value result = packElements(loc, {packedRes}, typeConverter, rewriter, outTensor);
+        Value result = packElements(loc, globalRes, typeConverter, rewriter, outTensor);
         
         rewriter.replaceOp(op, result);
         return success();
@@ -156,7 +161,7 @@ public:
             dyn_cast<LinearEncodingAttr>(outTensor.getEncoding());
 
         auto ll = llAttr.getLinearLayout();
-
+  
         Value threadId =
             NVVM::ThreadIdXOp::create(rewriter, loc,
                                       rewriter.getI32Type());
@@ -177,6 +182,9 @@ public:
         Value c5 = b.i32_val(5);
         Value zero = b.i32_val(0);
 
+        int32_t registerDims =
+            std::max(ll.getInDimSize(kReg), 1);
+        
         bool moreThanOneWarp =
             (ll.getInDimSize(kWarp) > 1);
 
@@ -207,33 +215,35 @@ public:
         //                    rewriter);
 
         Value tmp = b.mul(blockId, blockDim);
-        Value idx = b.add(tmp, threadId);
-        SmallVector<Value> logicalIndices;
-        logicalIndices.push_back(idx);
+        Value idx = b.add(tmp, laneId);
 
+        Value warpBase = b.add(
+            b.add(
+                b.mul(blockId, b.mul(blockDim, b.i32_val(registerDims))),
+                b.mul(warpId, b.i32_val(32 * registerDims))
+            ),
+            laneId
+        );
 
-        Value linearOffset = b.i32_val(0);
-        Value stride = b.i32_val(1);
-        for (size_t i = 0; i < logicalIndices.size(); ++i) {
-            Value contrib = b.mul(stride, logicalIndices[i]);
-            linearOffset = b.add(linearOffset, contrib);
-        };
         Value llStruct = adaptor.getValue();
         SmallVector<Value> storeMvs = unpackElements(loc, llStruct, rewriter);
-        SmallVector<Value> storeComps = unpackElements(loc, storeMvs[0], rewriter);
+        
+        for (uint32_t regIdx = 0; regIdx < registerDims; ++regIdx) {
+            SmallVector<Value> storeComps = unpackElements(loc, storeMvs[regIdx], rewriter);
+            Value regOffset = b.add(warpBase, b.mul(b.i32_val(regIdx), b.i32_val(32)));
+            for (uint32_t i = 0; i < storeComps.size(); ++i) {
+                Value compOffset = b.add(regOffset, b.mul(b.i32_val(outShape[0]), b.i32_val(i)));
+                ValueRange values(compOffset);
+                Value address =
+                    b.gep(LLVM::LLVMPointerType::get(ctx),
+                        rewriter.getF32Type(),
+                        llPointer,
+                        values);
 
-        for (uint32_t i = 0; i < storeComps.size(); ++i) {
-            Value compOffset = b.add(linearOffset, b.mul(b.i32_val(outShape[0]), b.i32_val(i)));
-            ValueRange values(compOffset);
-            Value address =
-                b.gep(LLVM::LLVMPointerType::get(ctx),
-                      rewriter.getF32Type(),
-                      llPointer,
-                      values);
-
-            // todo: change once we allow more dtypes
-            auto resTy = rewriter.getF32Type();
-            b.store(storeComps[i], address);
+                // todo: change once we allow more dtypes
+                auto resTy = rewriter.getF32Type();
+                b.store(storeComps[i], address);
+            }
         }
         rewriter.eraseOp(op);
         return success();

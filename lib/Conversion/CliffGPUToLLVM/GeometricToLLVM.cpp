@@ -58,78 +58,93 @@ public:
 
         // codegen
         auto fpTy = rewriter.getF32Type();
+        auto llAttr =
+            dyn_cast<LinearEncodingAttr>(outTensor.getEncoding());
+
+        auto ll = llAttr.getLinearLayout();
+        MLIRContext *ctx = rewriter.getContext();
+        auto kReg = StringAttr::get(ctx, "register");
+        int32_t registerDims =
+            std::max(ll.getInDimSize(kReg), 1);
+
+        SmallVector<Value> resInitializer(outActiveComps, b.f32_val(0.0f));
+        Value zeroMv = packElements(loc, resInitializer, converter, rewriter, outTy);
+
+        SmallVector<Value> outMultivectors(registerDims, zeroMv);
+        Value result = packElements(loc, outMultivectors, converter, rewriter, outTensor);
         
         auto adaptorLHS = adaptor.getLhs();
-        auto lhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorLHS, 0);
         auto adaptorRHS = adaptor.getRhs();
-        auto rhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorRHS, 0);
-        
-        SmallVector<Value> resInitializer;
-        for (int i = 0; i < outActiveComps; ++i) {
-            resInitializer.push_back(b.f32_val(0.0f));
-        }
-        Value resultMv = packElements(loc, resInitializer, converter, rewriter, outTy);
-        Value result = packElements(loc, {resultMv}, converter, rewriter, outTensor);
 
         // scalar case, e.g. ((e01 + 4) * (scalar))
         if (lhsMask == 1 || rhsMask == 1) {
-
-            auto cstMultivector = (lhsMask == 1) ? lhsMultivector : rhsMultivector;
-            auto dynMultivector = (lhsMask == 1) ? rhsMultivector : lhsMultivector;
-            auto dynMask = (lhsMask == 1) ? rhsMaskCopy : lhsMaskCopy;
-            auto cstScalar = LLVM::ExtractValueOp::create(rewriter, loc, cstMultivector, 0);
+            for (uint32_t regId = 0; regId < registerDims; ++regId) {
+                auto lhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorLHS, regId);
+                auto rhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorRHS, regId);
                 
-            int idx = 0;
-            while (dynMask) {
-
-                auto dynBasis = LLVM::ExtractValueOp::create(rewriter, loc, dynMultivector, idx);
-                Value ret = b.fmul(cstScalar, dynBasis);
-                result = LLVM::InsertValueOp::create(rewriter, loc, result, ret, {0, idx});
-                dynMask &= dynMask - 1;
-                idx++;
-            }
-
+                auto cstMultivector = (lhsMask == 1) ? lhsMultivector : rhsMultivector;
+                auto dynMultivector = (lhsMask == 1) ? rhsMultivector : lhsMultivector;
+                auto dynMask = (lhsMask == 1) ? rhsMaskCopy : lhsMaskCopy;
+                auto cstScalar = LLVM::ExtractValueOp::create(rewriter, loc, cstMultivector, 0);
+                
+                int idx = 0;
+                while (dynMask) {
+                    
+                    auto dynBasis = LLVM::ExtractValueOp::create(rewriter, loc, dynMultivector, idx);
+                    Value ret = b.fmul(cstScalar, dynBasis);
+                    result = LLVM::InsertValueOp::create(rewriter, loc, result, ret, {regId, idx});
+                    dynMask &= dynMask - 1;
+                    idx++;
+                }
+            }        
             rewriter.replaceOp(op, result);
             return success();
         }
-
-        int i = 0;
-
-        while (lhsMaskCopy) {
-            int j = 0;
-            int lhsBasis = __builtin_ctz(lhsMaskCopy);
-            int rhsMaskIter = rhsMaskCopy;
-
-            auto currLhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, lhsMultivector, i);
-
-            while (rhsMaskIter) {
-                int rhsBasis = __builtin_ctz(rhsMaskIter);
-                int newBasis = lhsBasis ^ rhsBasis;
-                int newSign = (!lhsBasis || !rhsBasis) ? 1 : 
-                               reorderSign(lhsBasis, rhsBasis) * metricSign(lhsBasis, rhsBasis, p, q, r);
-
-                if (newSign != 0) {
-
-                    auto currRhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, rhsMultivector, j);
-                    Value prod = b.fmul(currLhsBasis, currRhsBasis);
-                    Value ret = newSign==1 ? prod : b.neg(prod);
+        
+        for (uint32_t regId = 0; regId < registerDims; ++regId) {
+            auto lhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorLHS, regId);
+            auto rhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorRHS, regId);
+            
+            SmallVector<Value> lhsMvs= unpackElements(loc, adaptorLHS, rewriter);
+            SmallVector<Value> rhsMvs= unpackElements(loc, adaptorRHS, rewriter);
+            assert(lhsMvs.size() == rhsMvs.size() && "elements per thread should be a constant");
+            
+            int i = 0;
+            lhsMaskCopy = lhsMask;
+            while (lhsMaskCopy) {
+                int j = 0;
+                int lhsBasis = __builtin_ctz(lhsMaskCopy);
+                int rhsMaskIter = rhsMaskCopy;
+                
+                auto currLhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, lhsMultivector, i);
+                
+                while (rhsMaskIter) {
+                    int rhsBasis = __builtin_ctz(rhsMaskIter);
+                    int newBasis = lhsBasis ^ rhsBasis;
+                    int newSign = (!lhsBasis || !rhsBasis) ? 1 : 
+                    reorderSign(lhsBasis, rhsBasis) * metricSign(lhsBasis, rhsBasis, p, q, r);
                     
-                    int outIndex = basisToOffset[newBasis];
-                    auto acc = LLVM::ExtractValueOp::create(rewriter, loc, result, {0, outIndex});
-                    Value currOutVal = b.fadd(acc, ret);                    
-                    result = LLVM::InsertValueOp::create(rewriter, loc, result, currOutVal, {0, outIndex});
-
+                    if (newSign != 0) {
+                        
+                        auto currRhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, rhsMultivector, j);
+                        Value prod = b.fmul(currLhsBasis, currRhsBasis);
+                        Value ret = newSign==1 ? prod : b.neg(prod);
+                        
+                        int outIndex = basisToOffset[newBasis];
+                        auto acc = LLVM::ExtractValueOp::create(rewriter, loc, result, {regId, outIndex});
+                        Value currOutVal = b.fadd(acc, ret);                    
+                        result = LLVM::InsertValueOp::create(rewriter, loc, result, currOutVal, {regId, outIndex});
+                        
+                    }
+                    
+                    rhsMaskIter &= rhsMaskIter - 1;
+                    ++j;
                 }
                 
-                rhsMaskIter &= rhsMaskIter - 1;
-                ++j;
+                lhsMaskCopy &= lhsMaskCopy - 1;
+                ++i;
             }
-
-            lhsMaskCopy &= lhsMaskCopy - 1;
-            ++i;
-
         }
-        
         rewriter.replaceOp(op, result);
         return success();
     }
