@@ -260,13 +260,36 @@ def test_geo_prod(case, cuda_ctx):
 
 
 CASES_ROTATE = [
-    ("normal_case",       mv_point,    mv_scalar,    4, 1, 4),
+    ("N32_1",       mv_point,    mv_scalar,    4, 1, 4,   32,   1),
+    ("N64_1",       mv_point,    mv_scalar,    4, 1, 4,   64,   1),
+    ("N64_2",       mv_point,    mv_scalar,    4, 1, 4,   64,   2),
+    ("N128_1",      mv_point,    mv_scalar,    4, 1, 4,  128,   1),
+    ("N128_2",      mv_point,    mv_scalar,    4, 1, 4,  128,   2),
+    ("N128_4",      mv_point,    mv_scalar,    4, 1, 4,  128,   4),
+    ("N256_1",      mv_point,    mv_scalar,    4, 1, 4,  256,   1),
+    ("N256_2",      mv_point,    mv_scalar,    4, 1, 4,  256,   2),
+    ("N256_4",      mv_point,    mv_scalar,    4, 1, 4,  256,   4),
+    ("N256_8",      mv_point,    mv_scalar,    4, 1, 4,  256,   8),
+    ("N512_1",      mv_point,    mv_scalar,    4, 1, 4,  512,   1),
+    ("N512_2",      mv_point,    mv_scalar,    4, 1, 4,  512,   2),
+    ("N512_4",      mv_point,    mv_scalar,    4, 1, 4,  512,   4),
+    ("N512_8",      mv_point,    mv_scalar,    4, 1, 4,  512,   8),
+    ("N512_16",     mv_point,    mv_scalar,    4, 1, 4,  512,  16),
+    ("N1024_1",     mv_point,    mv_scalar,    4, 1, 4, 1024,   1),
+    ("N1024_2",     mv_point,    mv_scalar,    4, 1, 4, 1024,   2),
+    ("N1024_4",     mv_point,    mv_scalar,    4, 1, 4, 1024,   4),
+    ("N1024_8",     mv_point,    mv_scalar,    4, 1, 4, 1024,   8),
+    ("N1024_16",    mv_point,    mv_scalar,    4, 1, 4, 1024,  16),
 ]
 
-@pytest.mark.parametrize("case", CASES_ROTATE, ids=["normal_case"])
+@pytest.mark.parametrize("case", CASES_ROTATE, ids=[c[0] for c in CASES_ROTATE])
 def test_rotate(case, cuda_ctx):
-    N = 64
-    name , mv_a, mv_b, comps_a, comps_b, comps_c = case
+    name , mv_a, mv_b, comps_a, comps_b, comps_c, N, els_per_thread = case
+
+    layout = generate_layout(N, els_per_thread)
+    total_threads = N // els_per_thread
+    num_blocks = max(total_threads//(256), 1)
+    num_threads = min(total_threads, 256)
 
     #todo: cache it if neccesary
     generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
@@ -280,7 +303,7 @@ def test_rotate(case, cuda_ctx):
     expected = np.load("numerical/matrices/rotation/matrix_c.npz")['arr_0']
 
     # generate ptx for case
-    subprocess.run(["./numerical/scripts/compile_rotation.sh", "output.ptx"])
+    subprocess.run(["./numerical/scripts/compile_rotation.sh", str(N), layout, "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
@@ -289,8 +312,8 @@ def test_rotate(case, cuda_ctx):
     A_dev, B_dev = dev_matrices 
 
     func(A_dev, B_dev, result_dev,
-     block=(N, 1, 1),
-     grid=(1, 1, 1))
+     block=(num_threads, 1, 1),
+     grid=(num_blocks, 1, 1))
     
     cuda.memcpy_dtoh(result_host, result_dev)
 
