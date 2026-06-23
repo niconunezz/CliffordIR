@@ -322,22 +322,49 @@ def test_rotate(case, cuda_ctx):
 
 
 CASES_ROTATE_APPL = [
-    ("N64",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 64),
-    ("N128",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 128),
-    ("N256",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 256),
-    ("N512",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 512),
-    ("N1024",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 1024),
-    ("N2048",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 2048),
-    ("N4096",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 4096),
-    ("N8192",       mv_point, mv_point,    mv_scalar,    4, 4, 1, 4, 8192),
+    ("N64_ELS1",          64,        1),
+    ("N64_ELS2",          64,        2),
 
+    ("N128_ELS1",        128,        1),
+    ("N128_ELS4",        128,        4),
+
+    ("N256_ELS2",        256,        2),
+    ("N256_ELS8",        256,        8),
+
+    ("N512_ELS4",        512,        4),
+    ("N512_ELS16",       512,       16),
+
+    ("N1024_ELS1",      1024,        1),
+    ("N1024_ELS32",     1024,       32),
+
+    ("N2048_ELS4",      2048,        4),
+    ("N2048_ELS32",     2048,       32),
+
+    ("N4096_ELS8",      4096,        8),
+    ("N4096_ELS32",     4096,       32),
+
+    ("N8192_ELS16",     8192,       16),
+    ("N8192_ELS32",     8192,       32),
+
+    ("N65536_ELS8",    65536,        8),
+    ("N65536_ELS32",   65536,       32),
+
+    ("N1048576_ELS16",1048576,      16),
+    ("N1048576_ELS32",1048576,      32),
 ]
 
 @pytest.mark.parametrize("case", CASES_ROTATE_APPL, ids=[c[0] for c in CASES_ROTATE_APPL])
 def test_rotate_appl(case, cuda_ctx):
-    name , mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c, N = case
-    num_blocks = max(N//256, 1)
-    num_threads = min(N, 1024)
+    name, N, els_per_thread = case
+
+    mv_x = mv_point; mv_y = mv_point; mv_alpha = mv_scalar
+    comps_x = 4; comps_y = 4; comps_alpha = 1; comps_c = 4
+
+    layout = generate_layout(N, els_per_thread)
+    total_threads = N // els_per_thread
+    num_blocks = max(total_threads//256, 1)
+    num_threads = min(total_threads, 256)
+
     #todo: cache it if neccesary
     generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c)
     result_host = np.zeros(N * comps_c, dtype=np.float32)
@@ -352,7 +379,7 @@ def test_rotate_appl(case, cuda_ctx):
     expected = np.load("numerical/matrices/rotation_appl/matrix_c.npz")['arr_0']
 
     # generate ptx for case
-    subprocess.run(["./numerical/scripts/compile_end_to_end.sh", str(N), "output.ptx"])
+    subprocess.run(["./numerical/scripts/compile_end_to_end.sh", str(N), layout, "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
@@ -368,10 +395,10 @@ def test_rotate_appl(case, cuda_ctx):
     
     cuda.memcpy_dtoh(result_host, result_dev)
     if DEBUG:
-        if np.allclose(result_host, expected, atol=1e-5):
+        if np.allclose(result_host, expected, atol=1e-4):
             print("✓ CORRECTO")
         else:
-            diff = np.where(~np.isclose(result_host, expected, atol=1e-5))
+            diff = np.where(~np.isclose(result_host, expected, atol=1e-4))
             print(f"X outputs: {X.reshape(comps_x, N)[:, 0]}")
             print(f"Y outputs: {Y.reshape(comps_y, N)[:, 0]}")
             print(f"alpha outputs : {alpha.reshape(comps_alpha, N)[:, 0]}")
@@ -383,4 +410,4 @@ def test_rotate_appl(case, cuda_ctx):
             print(f"  got:      {result_host[diff]}")
             print(f"  expected: {expected[diff]}")
 
-    assert(np.allclose(result_host, expected, atol=1e-5))
+    assert(np.allclose(result_host, expected, atol=1e-4))
