@@ -167,8 +167,6 @@ public:
         Cliff_MultivectorType outMv = cast<Cliff_MultivectorType>(outTensor.getElementType());
 
         const auto outMask = outMv.getMask();
-        auto outMaskCopy = outMask;
-
         auto llLhsTensors = adaptor.getLhs();
         auto llRhsTensors = adaptor.getRhs();
 
@@ -184,6 +182,7 @@ public:
             uint32_t lhsIdx = 0;
             uint32_t rhsIdx = 0;
             SmallVector<Value> mvOutEls;
+            auto outMaskCopy = outMask;
             while (outMaskCopy) {
                 int outBasis = __builtin_ctz(outMaskCopy);
                 Value acc = b.f32_val(0.0f);
