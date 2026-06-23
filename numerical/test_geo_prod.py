@@ -224,7 +224,7 @@ def test_geo_prod(case, cuda_ctx):
     mask_mv_c = to_mask(c_sample.as_array()[mask_perm])
 
     # generate ptx for case
-    subprocess.run(["./numerical/scripts/compile_case.sh", str(mask_mv_a), str(mask_mv_b), str(mask_mv_c), "output.ptx"])
+    subprocess.run(["./numerical/scripts/compile_case.sh", str(mask_mv_a), str(mask_mv_b), str(mask_mv_c), str(N), layout, "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
