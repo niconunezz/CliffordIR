@@ -365,34 +365,31 @@ def test_rotate_appl(case, cuda_ctx):
     num_blocks = max(total_threads//256, 1)
     num_threads = min(total_threads, 256)
 
-    #todo: cache it if neccesary
     generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c)
     result_host = np.zeros(N * comps_c, dtype=np.float32)
     
-    X = np.load("numerical/matrices/rotation_appl/matrix_x.npz")['arr_0']
-    Y = np.load("numerical/matrices/rotation_appl/matrix_y.npz")['arr_0']
+    X = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_x.npz")['arr_0']
+    Y = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_y.npz")['arr_0']
     #! todo: study why this happens
     X = X.reshape(comps_x, N)[[0, 2, 1, 3]]
     Y = Y.reshape(comps_y, N)[[0, 2, 1, 3]]
 
-    alpha = np.load("numerical/matrices/rotation_appl/matrix_alpha.npz")['arr_0']
-    expected = np.load("numerical/matrices/rotation_appl/matrix_c.npz")['arr_0']
+    alpha = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_alpha.npz")['arr_0']
+    expected = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_c.npz")['arr_0']
 
     # generate ptx for case
     subprocess.run(["./numerical/scripts/compile_end_to_end.sh", str(N), layout, "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
-    
+
     func, dev_matrices, result_dev = init_device(ptx, [X, Y, alpha], result_host, "rotation")
     X_dev, Y_dev, alpha_dev = dev_matrices 
-    print(f"N : {N}")
-    print(f"Num_blocks : {num_blocks}")
 
     func(X_dev, Y_dev, alpha_dev, result_dev,
      block=(num_threads, 1, 1),
      grid=(num_blocks, 1, 1))
-    
+
     cuda.memcpy_dtoh(result_host, result_dev)
     if DEBUG:
         if np.allclose(result_host, expected, atol=1e-4):

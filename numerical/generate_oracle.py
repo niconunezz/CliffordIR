@@ -1,6 +1,6 @@
 import numpy as np
-import random
 import math 
+import os
 
 def initialize_matrix(comps, N):
     return np.random.randint(1, 20, (comps, N)).astype(np.float32)
@@ -93,6 +93,10 @@ def generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
 
 def generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c):
 
+    dir_name = f"numerical/matrices/rotation_appl/{N}"
+    if os.path.isdir(dir_name):
+        return
+
     C = np.empty((comps_c, N), dtype=np.float32)
     matrix_x = initialize_matrix(comps_x, N)
     matrix_y = initialize_matrix(comps_y, N)
@@ -121,7 +125,8 @@ def generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, com
     matrix_y[0, :] = 0
     matrix_y[3, :] = 1
 
-    np.savez("numerical/matrices/rotation_appl/matrix_x", matrix_x.flatten())
-    np.savez("numerical/matrices/rotation_appl/matrix_y", matrix_y.flatten())
-    np.savez("numerical/matrices/rotation_appl/matrix_alpha", matrix_alpha.flatten())
-    np.savez("numerical/matrices/rotation_appl/matrix_c", C.flatten())
+    os.makedirs(f"numerical/matrices/rotation_appl/{N}")
+    np.savez(f"numerical/matrices/rotation_appl/{N}/matrix_x", matrix_x.flatten())
+    np.savez(f"numerical/matrices/rotation_appl/{N}/matrix_y", matrix_y.flatten())
+    np.savez(f"numerical/matrices/rotation_appl/{N}/matrix_alpha", matrix_alpha.flatten())
+    np.savez(f"numerical/matrices/rotation_appl/{N}/matrix_c", C.flatten())
