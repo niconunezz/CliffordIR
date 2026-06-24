@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 DEBUG = True
-N = 4096
+N = 1048576
 
 layout, blades = Cl(2, 0, 1, firstIdx=0)
 e0 = blades['e0']
@@ -20,9 +20,6 @@ e012 = blades['e012']
 mv_point = lambda a, b, c, d: 0 + b*e02 + c*e01 + e12
 mv_scalar = lambda a : a*e1*e1
 
-CASES_ROTATE_APPL = [
-    ("normal_case",       ),
-]
 
 def init_device(ptx, matrices, result, func_name):
 
@@ -39,8 +36,12 @@ def init_device(ptx, matrices, result, func_name):
 def test_rotate_appl():
     cuda.init()
     ctx = cuda.Device(0).make_context()
-    num_blocks = max(N//256, 1)
-    num_threads = min(N, 1024)
+
+    els_per_thread = 8
+    total_threads = N // els_per_thread
+    num_blocks = max(total_threads//256, 1)
+    num_threads = min(total_threads, 256)
+
 
     mv_x = mv_point
     mv_y = mv_point
