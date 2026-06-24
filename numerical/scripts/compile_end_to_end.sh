@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# compile_case.sh <mask_a> <mask_b> <mask_c> [output_ptx]
-
 set -euo pipefail
 
 NUM_ELS=$1
@@ -9,61 +7,33 @@ OUT_PTX=${3:-output.ptx}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATE="$SCRIPT_DIR/../samples/cliff_to_llvm.mlir"
+BUILD="$SCRIPT_DIR/../../build/bin"
 
-TMP_MLIR=$(mktemp /tmp/cliff_case_XXXXXX.mlir)
-echo "[tmp] TMP_MLIR=$TMP_MLIR"
-
-TMP_INTER_MLIR=$(mktemp /tmp/cliff_inter_XXXXXX.mlir)
-
-TMP_LLVM_MLIR=$(mktemp /tmp/cliff_llvm_XXXXXX.mlir)
-echo "[tmp] TMP_LLVM_MLIR=$TMP_LLVM_MLIR"
-
-TMP_LL=$(mktemp /tmp/cliff_XXXXXX.ll)
-echo "[tmp] TMP_LL=$TMP_LL"
-
-cleanup() { rm -f "$TMP_MLIR" "$TMP_INTER_MLIR" "$TMP_LLVM_MLIR" "$TMP_LL"; }
+TMP_INTER=$(mktemp /tmp/cliff_inter_XXXXXX.mlir)
+cleanup() { rm -f "$TMP_INTER"; }
 trap cleanup EXIT
 
-python3 - <<EOF
-import re, sys
+t() { date +%s%N; }
+elapsed() { echo "$(( ($2 - $1) / 1000000 ))ms"; }
 
-with open("$TEMPLATE") as f:
-    src = f.read()
+t0=$(t)
+sed "s/NUM_ELS/$NUM_ELS/g" "$TEMPLATE" \
+| "$BUILD/cliff-opt" --mlir-timing \
+    --rewrite-sandwich --rewrite-exponential \
+    --geometric-type-conversion --convert-cliff-to-cliffGPU - \
+| python3 -c "
+import sys, re
+src = sys.stdin.read()
+print(re.sub(r'(#clg\.linear<)\{.*?\}(>)', r'\1${LAYOUT}\2', src))
+" > "$TMP_INTER"
+t1=$(t)
+echo "── pass1+layout: $(elapsed $t0 $t1)"
 
-masks = [$NUM_ELS]
-result = src.replace("NUM_ELS", str($NUM_ELS))
-
-with open("$TMP_MLIR", "w") as f:
-    f.write(result)
-EOF
-
-# ── 2. MLIR → LLVM dialect ───────────────────────────────────────
-"$SCRIPT_DIR/../../build/bin/cliff-opt" "$TMP_MLIR" \
-    --rewrite-sandwich --rewrite-exponential --geometric-type-conversion --convert-cliff-to-cliffGPU > "$TMP_INTER_MLIR"
-
-python3 - <<EOF
-import re, sys
-
-with open("$TMP_INTER_MLIR") as f:
-    src = f.read()
-
-src = re.sub(
-    r'(#clg\.linear<)\{.*?\}(>)',
-    rf'\1{"""$LAYOUT"""}\2',
-    src
-)
-
-with open("$TMP_INTER_MLIR", "w") as f:
-    f.write(src)
-EOF
-
-"$SCRIPT_DIR/../../build/bin/cliff-opt" "$TMP_INTER_MLIR" \
-     --convert-cliffGPU-to-llvm > "$TMP_LLVM_MLIR"
-
-# ── 3. LLVM dialect → LLVM IR ────────────────────────────────────
-"$SCRIPT_DIR/../../mlir-translate" --mlir-to-llvmir "$TMP_LLVM_MLIR" -o "$TMP_LL"
-
-# ── 4. LLVM IR → PTX ─────────────────────────────────────────────
-"$SCRIPT_DIR/../../llc_mlir" -march=nvptx64 -mcpu=sm_80 "$TMP_LL" -o "$OUT_PTX"
-
-echo "✓ PTX generated: $OUT_PTX"
+t2=$(t)
+"$BUILD/cliff-opt" --mlir-timing \
+    --convert-cliffGPU-to-llvm "$TMP_INTER" \
+| "$SCRIPT_DIR/../../mlir-translate" --mlir-to-llvmir - \
+| "$SCRIPT_DIR/../../llc_mlir" -march=nvptx64 -mcpu=sm_80 -O2 - -o "$OUT_PTX"
+t3=$(t)
+echo "── pass2+translate+llc: $(elapsed $t2 $t3)"
+echo "── total: $(elapsed $t0 $t3)"
