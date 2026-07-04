@@ -222,7 +222,7 @@ def test_geo_prod(case, cuda_ctx):
     mask_mv_c = to_mask(c_sample.as_array()[mask_perm])
 
     # generate ptx for case
-    subprocess.run(["./numerical/scripts/compile_case.sh", str(mask_mv_a), str(mask_mv_b), str(mask_mv_c), str(N), layout, "output.ptx"])
+    subprocess.run(["./numerical/scripts/pga2d/compile_case.sh", str(mask_mv_a), str(mask_mv_b), str(mask_mv_c), str(N), layout, "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
@@ -301,7 +301,7 @@ def test_rotate(case, cuda_ctx):
     expected = np.load("numerical/matrices/rotation/matrix_c.npz")['arr_0']
 
     # generate ptx for case
-    subprocess.run(["./numerical/scripts/compile_rotation.sh", str(N), layout, "output.ptx"])
+    subprocess.run(["./numerical/scripts/pga2d/compile_rotation.sh", str(N), layout, "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
@@ -376,7 +376,7 @@ def test_rotate_appl(case, cuda_ctx):
     expected = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_c.npz")['arr_0']
 
     # generate ptx for case
-    subprocess.run(["./numerical/scripts/compile_end_to_end.sh", str(N), layout, "output.ptx"])
+    subprocess.run(["./numerical/scripts/pga2d/compile_end_to_end.sh", str(N), layout, "output.ptx"])
 
     with open("output.ptx", "r") as f:
         ptx = f.read()

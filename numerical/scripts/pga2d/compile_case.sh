@@ -11,13 +11,13 @@ LAYOUT=$5
 OUT_PTX=${6:-output.ptx}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TEMPLATE="$SCRIPT_DIR/../samples/geo_prod.mlir"
+TEMPLATE="$SCRIPT_DIR/../../samples/pga2d/geo_prod.mlir"
 
 # ── 1. Instanciar template → 2. MLIR → LLVM dialect → 3. LLVM IR → 4. PTX ──
 python3 - <<EOF \
-| "$SCRIPT_DIR/../../build/bin/cliff-opt" --convert-cliffGPU-to-llvm \
-| "$SCRIPT_DIR/../../mlir-translate" --mlir-to-llvmir \
-| "$SCRIPT_DIR/../../llc_mlir" -march=nvptx64 -mcpu=sm_80 -o "$OUT_PTX"
+| "$SCRIPT_DIR/../../../build/bin/cliff-opt" --convert-cliffGPU-to-llvm \
+| "$SCRIPT_DIR/../../../mlir-translate" --mlir-to-llvmir \
+| "$SCRIPT_DIR/../../../llc_mlir" -march=nvptx64 -mcpu=sm_80 -o "$OUT_PTX"
 
 with open("$TEMPLATE") as f:
     src = f.read()
