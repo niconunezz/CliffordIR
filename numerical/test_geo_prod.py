@@ -202,8 +202,6 @@ def test_geo_prod(case, cuda_ctx):
     B = np.load("numerical/matrices/matrix_b.npz")['arr_0']
 
     # change from canonical -> bitmap layout, see explanation in cliffOps.cpp
-    #! note we are using the same exact process, and it only works because the mask
-    #! is its own inverse, if for other p,q,r this is not the case there should be 2 masks
 
     A = A.reshape(comps_a, N)[adapted_mask_a, :]
     A = A.flatten()
