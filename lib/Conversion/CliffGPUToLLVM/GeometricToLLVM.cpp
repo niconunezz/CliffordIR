@@ -116,7 +116,7 @@ public:
                 int lhsBasis = __builtin_ctz(lhsMaskCopy);
                 int rhsMaskIter = rhsMaskCopy;
                 
-                auto currLhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, lhsMultivector, i);
+                Value currLhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, lhsMultivector, i);
                 
                 while (rhsMaskIter) {
                     int rhsBasis = __builtin_ctz(rhsMaskIter);
