@@ -3,7 +3,7 @@ import math
 import os
 
 def initialize_matrix(comps, N):
-    return np.random.randint(1, 20, (comps, N)).astype(np.float32)
+    return np.random.rand(comps, N).astype(np.float32)
 
 
 def extract_geo_prod_comps(mv_a, mv_b, matrix_a, matrix_b, comps_c):
