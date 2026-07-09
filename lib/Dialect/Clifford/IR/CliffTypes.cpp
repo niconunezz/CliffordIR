@@ -54,6 +54,7 @@ uint64_t Cliff_PointType::getActiveMask() const {
     assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGA algebras");
 
     int n = space.getP();
+
     return fillWithGospersHack(n, n+1);
 }
 
@@ -69,8 +70,28 @@ uint64_t Cliff_MotorType::getActiveMask() const {
     auto space = getSpace();
     assert(space.getP() > 0 && space.getQ() == 0 && space.getR() == 1 && "This function is only available for PGA algebras");
     int n = space.getP();
-    // motors are always scalar + bivector
-    return fillWithGospersHack(2, n+1);
+    
+    MotorKind kind = getKind().getValue();
+
+    uint64_t ret;
+    if (kind == MotorKind::Rotor) {
+        ret = fillWithGospersHack(2, n+1) | 1;
+    }
+    else if (kind == MotorKind::Translator) {
+        uint32_t highestEvenGrade = (n+1) % 2 == 0 ? (n+1) : n; 
+        ret = fillWithGospersHack(highestEvenGrade, n+1) | 1;
+    }
+    else if (kind == MotorKind::General) {
+        uint32_t out = 1;
+        uint32_t grade = 0;
+        while (grade < n) {
+            out |= fillWithGospersHack(grade, n+1);
+            grade += 2;
+        }
+        ret = out;
+    }
+
+    return ret;
 }
 
 Type Cliff_MultivectorType::asMultivector() const { return Type(*this); }
