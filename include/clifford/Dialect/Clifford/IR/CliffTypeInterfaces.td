@@ -26,6 +26,25 @@ def Cliff_AlgebraicElementInterface : TypeInterface<"Cliff_AlgebraicElementInter
 
 }
 
+// anything but multivectors : points, lines, planes, motors
+def Cliff_ConcreteElementInterface : TypeInterface<"Cliff_ConcreteElementInterface", [Cliff_AlgebraicElementInterface]> {
+    
+    let cppNamespace = "::mlir::cliff";
+    
+    let methods = [
+       
+        InterfaceMethod<
+            /*desc=*/"Get normalized status",
+            /*retType=*/"bool",
+            /*methodName=*/"isNormalized",
+            /*args=*/(ins), [{}], [{
+                return $_type.getNormalized();
+            }]>
+
+    ];
+}
+
+
 
 // oriented objects, e.g. points, lines, planes
 def Cliff_GeometricElementInterface : TypeInterface<"Cliff_GeometricElementInterface", [Cliff_AlgebraicElementInterface]> {
@@ -40,15 +59,6 @@ def Cliff_GeometricElementInterface : TypeInterface<"Cliff_GeometricElementInter
             /*methodName=*/"getObjectKind",
             /*args=*/(ins), [{}], [{
                 return $_type.getKind();
-            }]>,
-        
-        InterfaceMethod<
-            /*desc=*/"Get normalized status",
-            /*retType=*/"bool",
-            /*methodName=*/"isNormalized",
-            /*args=*/(ins), [{}], [{
-                return $_type.getNormalized();
             }]>
-
     ];
 }

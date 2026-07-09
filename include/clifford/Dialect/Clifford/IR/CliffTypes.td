@@ -38,6 +38,7 @@ def Cliff_Scalar : Cliff_ObjType<"Cliff_Scalar",
 def Cliff_Point : Cliff_ObjType<"Cliff_Point",
                                  "point", 
                                  [DeclareTypeInterfaceMethods<Cliff_GeometricElementInterface>,
+                                  DeclareTypeInterfaceMethods<Cliff_ConcreteElementInterface>,
                                   DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
     let summary = "A type that represents a point object in the specified algebra";
     let description = [{
@@ -54,6 +55,7 @@ def Cliff_Point : Cliff_ObjType<"Cliff_Point",
 def Cliff_Line : Cliff_ObjType<"Cliff_Line",
                                  "line", 
                                  [DeclareTypeInterfaceMethods<Cliff_GeometricElementInterface>,
+                                  DeclareTypeInterfaceMethods<Cliff_ConcreteElementInterface>,
                                   DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
     let summary = "A type that represents a line in the specified algebra";
     let description = [{
@@ -69,7 +71,9 @@ def Cliff_Line : Cliff_ObjType<"Cliff_Line",
 /*
 def Cliff_Plane : Cliff_ObjType<"Cliff_Plane",
                                  "plane", 
-                                 [DeclareTypeInterfaceMethods<Cliff_GeometricElementInterface>]> {
+                                 [DeclareTypeInterfaceMethods<Cliff_GeometricElementInterface>,
+                                  DeclareTypeInterfaceMethods<Cliff_ConcreteElementInterface>,
+                                  DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
     let summary = "A type that represents a plane in the specified algebra";
     let description = [{
         The `Plane` type should be thinked of a more concret representation of a multivector.
@@ -85,7 +89,8 @@ def Cliff_Plane : Cliff_ObjType<"Cliff_Plane",
 
 def Cliff_Motor : Cliff_ObjType<"Cliff_Motor",
                                  "motor", 
-                                 [DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
+                                 [DeclareTypeInterfaceMethods<Cliff_ConcreteElementInterface>,
+                                  DeclareTypeInterfaceMethods<Cliff_AlgebraicElementInterface>]> {
     let summary = "A type that represents a motor in the specified algebra";
     let description = [{
         The `Motor` type should be thinked of a more concret representation of a multivector.

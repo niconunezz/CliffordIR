@@ -14,6 +14,18 @@ LogicalResult GeoProd::verify() {
     if (!lhsTensor || !rhsTensor || !outTensor)
         return emitError("operands must be ranked tensors");
 
+    auto maybeLhsConcrete = dyn_cast<Cliff_ConcreteElementInterface>(lhsTensor.getElementType());
+    auto maybeRhsConcrete = dyn_cast<Cliff_ConcreteElementInterface>(rhsTensor.getElementType());
+
+    // if we deal with objs different from multivectors we dont
+    // want to rely on the getMask methods as they dont include important info.
+    // e.g. a sandwich product over an object b always returns this same b object
+    // this depends completely on the fact that the geo prod on the left and on the
+    // right are done on the same multivector (reversed on the right). This method
+    // cannot infer that, creating the upper bound and so, wasting memory
+    if (maybeLhsConcrete || maybeRhsConcrete)
+        return success();
+
     auto lhsTy = dyn_cast<Cliff_AlgebraicElementInterface>(lhsTensor.getElementType());
     auto rhsTy = dyn_cast<Cliff_AlgebraicElementInterface>(rhsTensor.getElementType());
     auto outTy = dyn_cast<Cliff_AlgebraicElementInterface>(outTensor.getElementType());
@@ -33,7 +45,12 @@ LogicalResult GeoProd::verify() {
 
     const uint64_t lhsMask = lhsTy.getActiveMask();
     const uint64_t rhsMask = rhsTy.getActiveMask();
+    
+    llvm::errs() << "lhsMask : " << lhsMask << "\n";
+    llvm::errs() << "rhsMask : " << rhsMask << "\n";
+
     const uint64_t outMask = outTy.getActiveMask();
+    llvm::errs() << "outMask : " << outMask << "\n";
     
     uint64_t lhsMaskCopy = lhsMask;
     uint64_t rhsMaskCopy = rhsMask;
@@ -66,12 +83,7 @@ LogicalResult GeoProd::verify() {
     // linear combination of this bases as an 8 bit number where each of the bits represents
     // if the corresponding basis is active (has a non-zero factor).
     // Set this ground-rules its easy to understand the following algorithm.
-    // Note : The scalar case is kind of strange as 0...1 xor 0...1 = 0...0 but scalars dont dissappear,
-    // for now we will force the scalar bit to be always 1 and assume there is always a scalar component. 
 
-    if (((lhsMask & 1) == 0) || ((rhsMask & 1)== 0))
-        return emitError("lhsMask and rhsMask last bit should be always one!");
-    
     uint64_t resultMask = getResultMask(lhsMaskCopy, rhsMaskCopy, p, q, r);
     
     if (resultMask != outMask) 
