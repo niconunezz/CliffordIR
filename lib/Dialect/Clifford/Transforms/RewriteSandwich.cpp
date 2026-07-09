@@ -70,10 +70,10 @@ public:
         //todo : think about this
         bool normalized = false;
         Value motorRev = Reverse::create(rewriter, loc,
-             RankedTensorType::get(motorTensor.getShape(), Cliff_MotorType::get(ctx, normalized, space)), op.getLhs());
+             RankedTensorType::get(motorTensor.getShape(), motor), op.getLhs());
         LLVM_DEBUG(llvm::dbgs() << "[RewriteSandwich] Created reversed" << "\n");
         Cliff_PointType pointTy = Cliff_PointType::get(ctx, obj.getObjectKind(), false, space);
-        Value geoProdRhs = GeoProd::create(rewriter, loc, RankedTensorType::get(motorTensor.getShape(), pointTy), geoProdLhs, motorRev);
+        Value geoProdRhs = GeoProd::create(rewriter, loc, RankedTensorType::get(motorTensor.getShape(), outTensor.getElementType()), geoProdLhs, motorRev);
         LLVM_DEBUG(llvm::dbgs() << "[RewriteSandwich] Created second geoProd" << "\n");
 
         rewriter.replaceOp(op, geoProdRhs);
