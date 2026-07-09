@@ -51,5 +51,18 @@ def GeometricKind : I32EnumAttr<"GeometricKind", "",
     let genSpecializedAttr = 0;
     let cppNamespace = "::mlir::cliff";
 }
-
 def GeometricKindAttr : EnumAttr<Cliff_Dialect, GeometricKind, "geo_kind">;
+
+
+def MotorKindRotor : I32EnumAttrCase<"Rotor", 0, "rotor">;
+def MotorKindTranslator : I32EnumAttrCase<"Translator", 1, "translator">;
+def MotorKindGeneral : I32EnumAttrCase<"General", 2, "general">;
+
+def MotorKind : I32EnumAttr<"MotorKind", "",
+    [MotorKindRotor, MotorKindTranslator, 
+    MotorKindGeneral]> {
+    
+    let genSpecializedAttr = 0;
+    let cppNamespace = "::mlir::cliff";
+}
+def MotorKindAttr : EnumAttr<Cliff_Dialect, MotorKind, "motor_kind">;

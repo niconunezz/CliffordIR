@@ -92,12 +92,11 @@ def Cliff_Motor : Cliff_ObjType<"Cliff_Motor",
         It is neccesary for early on optimizations that are exlusive for lines.
     }];
 
-    let parameters = (ins "bool" : $normalized, "CliffordAlgebraAttr" : $space);
+    let parameters = (ins "bool" : $normalized,  AttrParameter<"::mlir::cliff::MotorKindAttr", ""> : $kind, "CliffordAlgebraAttr" : $space);
     
-    let assemblyFormat = "`<` $normalized `,` $space `>`";
+    let assemblyFormat = "`<` $normalized `,` $kind `,` $space `>`";
 
 }
-
 
 def Cliff_Multivector : Cliff_ObjType<"Cliff_Multivector",
                                    "multivector",
