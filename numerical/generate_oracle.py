@@ -63,7 +63,7 @@ def generate_geo_prods_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
     return c_default_indices, a_default_indices, b_default_indices
 
 
-def generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
+def generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c, mode):
 
     C = np.empty((comps_c, N), dtype=np.float32)
     matrix_a = initialize_matrix(comps_a, N)
@@ -83,17 +83,21 @@ def generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
             C[i, j] = coeffs[i]
 
     # force euclidean point : x*e01 + y*e02 + e12 
-    matrix_a[0, :] = 0 
-    matrix_a[3, :] = 1
+    matrix_a[-1, :] = 1
 
-    np.savez("numerical/matrices/rotation/matrix_a", matrix_a.flatten())
-    np.savez("numerical/matrices/rotation/matrix_b", matrix_b.flatten())
-    np.savez("numerical/matrices/rotation/matrix_c", C.flatten())
+    np.savez(f"numerical/matrices/{mode}/rotation/matrix_a", matrix_a.flatten())
+    np.savez(f"numerical/matrices/{mode}/rotation/matrix_b", matrix_b.flatten())
+    np.savez(f"numerical/matrices/{mode}/rotation/matrix_c", C.flatten())
 
 
-def generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c):
+coeffs_indices = {
+    "pga2d" : [0, 4, 5, 6],
+    "pga3d" : [0, 5, 6, 7, 11, 12, 13, 14]}
 
-    dir_name = f"numerical/matrices/rotation_appl/{N}"
+
+def generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c, mode : str):
+
+    dir_name = f"numerical/matrices/{mode}/rotation_appl/{N}"
     if os.path.isdir(dir_name):
         return
 
@@ -110,23 +114,22 @@ def generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, com
         mvalpha = mv_alpha(*matrix_alpha[:, j])
         mv_out= complete_rotation(mvx, mvy, mvalpha)
         vals = mv_out.value
-
-        coeffs = vals[[0, 4, 5, 6]]
+        
+        coeffs = vals[coeffs_indices[mode]]
 
         if (j == 0):  print(f"mvx : {mvx}");  print(f"mvy : {mvy}") ; print(f"mvalpha : {mvalpha}") ;  print(f"out : {mv_out}")
 
         for i in range(comps_c):
             C[i, j] = coeffs[i]
 
-    # force euclidean point : x*e01 + y*e02 + e12 
-    matrix_x[0, :] = 0
-    matrix_x[3, :] = 1
-    
-    matrix_y[0, :] = 0
-    matrix_y[3, :] = 1
+    # force euclidean point
+    #! we assume here that the last multivector is the one with coeff==1, 
+    # not really sure though
+    matrix_x[-1, :] = 1
+    matrix_y[-1, :] = 1
 
-    os.makedirs(f"numerical/matrices/rotation_appl/{N}")
-    np.savez(f"numerical/matrices/rotation_appl/{N}/matrix_x", matrix_x.flatten())
-    np.savez(f"numerical/matrices/rotation_appl/{N}/matrix_y", matrix_y.flatten())
-    np.savez(f"numerical/matrices/rotation_appl/{N}/matrix_alpha", matrix_alpha.flatten())
-    np.savez(f"numerical/matrices/rotation_appl/{N}/matrix_c", C.flatten())
+    os.makedirs(f"numerical/matrices/{mode}/rotation_appl/{N}")
+    np.savez(f"numerical/matrices/{mode}/rotation_appl/{N}/matrix_x", matrix_x.flatten())
+    np.savez(f"numerical/matrices/{mode}/rotation_appl/{N}/matrix_y", matrix_y.flatten())
+    np.savez(f"numerical/matrices/{mode}/rotation_appl/{N}/matrix_alpha", matrix_alpha.flatten())
+    np.savez(f"numerical/matrices/{mode}/rotation_appl/{N}/matrix_c", C.flatten())

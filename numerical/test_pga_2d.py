@@ -7,6 +7,7 @@ import random
 from clifford import Cl
 DEBUG = True
 
+MODE = "pga2d"
 layout, blades = Cl(2, 0, 1, firstIdx=0)
 e0 = blades['e0']
 e1 = blades['e1']
@@ -62,7 +63,7 @@ mve0e012   = lambda a,b,c    : a + b*e0  + c*e012
 mve1e012   = lambda a,b,c    : a + b*e1  + c*e012
 
 mve0e1e2e01e02e12e012 = lambda a, b, c, d ,e , f, g, h : a + b*e0 + c*e1 + d*e2 + e*e01 + f*e02 + g*e12 + h*e012
-mv_point = lambda a, b, c, d: 0 + b*e02 + c*e01 + e12
+mv_point = lambda b, c, _ : b*e02 + c*e01 + e12
 mv_scalar = lambda a : a*e1*e1
 
 def to_mask(arr):
@@ -117,6 +118,7 @@ def cuda_ctx():
     ctx.pop()
 
 CASES = [
+    ("scalar_e0e1e2",  mv_scalar, mve0e1e2, 1, 4, 4, 64, 1),
     ("e12__e12",       mve12,    mve12,    2, 2, 2, 128, 1),
     ("e12__e12",       mve12,    mve12,    2, 2, 2, 4096, 16),
     ("e02__e02",       mve02,    mve02,    2, 2, 2, 64, 1),
@@ -258,26 +260,26 @@ def test_geo_prod(case, cuda_ctx):
 
 
 CASES_ROTATE = [
-    ("N32_1",       mv_point,    mv_scalar,    4, 1, 4,   32,   1),
-    ("N64_1",       mv_point,    mv_scalar,    4, 1, 4,   64,   1),
-    ("N64_2",       mv_point,    mv_scalar,    4, 1, 4,   64,   2),
-    ("N128_1",      mv_point,    mv_scalar,    4, 1, 4,  128,   1),
-    ("N128_2",      mv_point,    mv_scalar,    4, 1, 4,  128,   2),
-    ("N128_4",      mv_point,    mv_scalar,    4, 1, 4,  128,   4),
-    ("N256_1",      mv_point,    mv_scalar,    4, 1, 4,  256,   1),
-    ("N256_2",      mv_point,    mv_scalar,    4, 1, 4,  256,   2),
-    ("N256_4",      mv_point,    mv_scalar,    4, 1, 4,  256,   4),
-    ("N256_8",      mv_point,    mv_scalar,    4, 1, 4,  256,   8),
-    ("N512_1",      mv_point,    mv_scalar,    4, 1, 4,  512,   1),
-    ("N512_2",      mv_point,    mv_scalar,    4, 1, 4,  512,   2),
-    ("N512_4",      mv_point,    mv_scalar,    4, 1, 4,  512,   4),
-    ("N512_8",      mv_point,    mv_scalar,    4, 1, 4,  512,   8),
-    ("N512_16",     mv_point,    mv_scalar,    4, 1, 4,  512,  16),
-    ("N1024_1",     mv_point,    mv_scalar,    4, 1, 4, 1024,   1),
-    ("N1024_2",     mv_point,    mv_scalar,    4, 1, 4, 1024,   2),
-    ("N1024_4",     mv_point,    mv_scalar,    4, 1, 4, 1024,   4),
-    ("N1024_8",     mv_point,    mv_scalar,    4, 1, 4, 1024,   8),
-    ("N1024_16",    mv_point,    mv_scalar,    4, 1, 4, 1024,  16),
+    ("N32_1",       mv_point,    mv_scalar,    3, 1, 4,   32,   1),
+    ("N64_1",       mv_point,    mv_scalar,    3, 1, 4,   64,   1),
+    ("N64_2",       mv_point,    mv_scalar,    3, 1, 4,   64,   2),
+    ("N128_1",      mv_point,    mv_scalar,    3, 1, 4,  128,   1),
+    ("N128_2",      mv_point,    mv_scalar,    3, 1, 4,  128,   2),
+    ("N128_4",      mv_point,    mv_scalar,    3, 1, 4,  128,   4),
+    ("N256_1",      mv_point,    mv_scalar,    3, 1, 4,  256,   1),
+    ("N256_2",      mv_point,    mv_scalar,    3, 1, 4,  256,   2),
+    ("N256_4",      mv_point,    mv_scalar,    3, 1, 4,  256,   4),
+    ("N256_8",      mv_point,    mv_scalar,    3, 1, 4,  256,   8),
+    ("N512_1",      mv_point,    mv_scalar,    3, 1, 4,  512,   1),
+    ("N512_2",      mv_point,    mv_scalar,    3, 1, 4,  512,   2),
+    ("N512_4",      mv_point,    mv_scalar,    3, 1, 4,  512,   4),
+    ("N512_8",      mv_point,    mv_scalar,    3, 1, 4,  512,   8),
+    ("N512_16",     mv_point,    mv_scalar,    3, 1, 4,  512,  16),
+    ("N1024_1",     mv_point,    mv_scalar,    3, 1, 4, 1024,   1),
+    ("N1024_2",     mv_point,    mv_scalar,    3, 1, 4, 1024,   2),
+    ("N1024_4",     mv_point,    mv_scalar,    3, 1, 4, 1024,   4),
+    ("N1024_8",     mv_point,    mv_scalar,    3, 1, 4, 1024,   8),
+    ("N1024_16",    mv_point,    mv_scalar,    3, 1, 4, 1024,  16),
 ]
 
 @pytest.mark.parametrize("case", CASES_ROTATE, ids=[c[0] for c in CASES_ROTATE])
@@ -288,17 +290,15 @@ def test_rotate(case, cuda_ctx):
     total_threads = N // els_per_thread
     num_blocks = max(total_threads//(256), 1)
     num_threads = min(total_threads, 256)
-
     #todo: cache it if neccesary
-    generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
+    generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c, MODE)
     result_host = np.zeros(N * comps_c, dtype=np.float32)
     
-    A = np.load("numerical/matrices/rotation/matrix_a.npz")['arr_0']
-    #! todo: study why this happens
-    A = A.reshape(comps_a, N)[[0, 2, 1, 3]]
-    B = np.load("numerical/matrices/rotation/matrix_b.npz")['arr_0']
+    A = np.load(f"numerical/matrices/{MODE}/rotation/matrix_a.npz")['arr_0']
+    A = A.reshape(comps_a, N)
+    B = np.load(f"numerical/matrices/{MODE}/rotation/matrix_b.npz")['arr_0']
 
-    expected = np.load("numerical/matrices/rotation/matrix_c.npz")['arr_0']
+    expected = np.load(f"numerical/matrices/{MODE}/rotation/matrix_c.npz")['arr_0']
 
     # generate ptx for case
     subprocess.run(["./numerical/scripts/pga2d/compile_rotation.sh", str(N), layout, "output.ptx"])
@@ -313,7 +313,23 @@ def test_rotate(case, cuda_ctx):
      block=(num_threads, 1, 1),
      grid=(num_blocks, 1, 1))
     
-    cuda.memcpy_dtoh(result_host, result_dev)
+    cuda.memcpy_dtoh(result_host, result_dev)    
+    result_host = result_host.reshape(comps_c, N)[[0, 2, 1, 3]]
+    result_host = result_host.flatten()
+    if DEBUG:
+        if np.allclose(result_host, expected, atol=1e-4):
+            print("✓ CORRECTO")
+        else:
+            diff = np.where(~np.isclose(result_host, expected, atol=1e-4))
+            print(f"A outputs: {A.reshape(comps_a, N)[:, 0]}")
+            print(f"B outputs : {B.reshape(comps_b, N)[:, 0]}")
+            print(f"Kernel outcome : {result_host.reshape(comps_c, N)[:, 0]}")
+            print(f"Expected outcome : {expected.reshape(comps_c, N)[:, 0]}")
+            print(f"✗ INCORRECTO en {len(diff[0]) / (comps_c * N)} de los índices")
+            print(f"✗ INCORRECTO en índices: {diff}")
+
+            print(f"  got:      {result_host[diff]}")
+            print(f"  expected: {expected[diff]}")
 
     assert(np.allclose(result_host, expected, atol=1e-5))
     
