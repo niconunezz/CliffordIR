@@ -135,7 +135,7 @@ SmallVector<uint64_t> getIndicesForGrade(int grade, int numDims) {
 uint64_t fillWithGospersHack(int k, int n) {
 
     SmallVector<uint64_t> indices =  getIndicesForGrade(k, n);
-    uint64_t ret = 1;
+    uint64_t ret = 0;
     for (const auto set : indices)
         ret |= (1ULL << set);
 
@@ -152,15 +152,15 @@ bool checkWithGospersHack(int k, int n, uint64_t mask) {
 }
 
 
-uint64_t getResultMask(uint64_t lhsMask, uint64_t  rhsMask, unsigned p, unsigned q, unsigned r) {
-        uint64_t resultMask = 0;
+uint64_t getResultMask(uint64_t lhsMask, uint64_t rhsMask, unsigned p, unsigned q, unsigned r) {
+        uint64_t resultMask = ((lhsMask % 2 == 1) && (rhsMask % 2 == 1)) ? 1 : 0;
+
         while (lhsMask) {
             uint64_t lhsIndex = __builtin_ctz(lhsMask);
             uint64_t rhsMaskIter = rhsMask;
             while (rhsMaskIter) {
                 uint64_t rhsIndex = __builtin_ctz(rhsMaskIter);
-
-                uint64_t newBasis = lhsIndex ^ rhsIndex;
+                uint64_t newBasis = lhsIndex ^ rhsIndex;                
                 uint64_t newSign = metricSign(lhsIndex, rhsIndex, p, q, r);
 
                 if (newSign != 0)
