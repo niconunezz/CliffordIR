@@ -9,10 +9,11 @@ OUT_PTX=${3:-output.ptx}
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATE="$SCRIPT_DIR/../../samples/pga2d/rotation.mlir"
 TMP_MLIR=$(mktemp /tmp/cliff_case_XXXXXX.mlir)
+TMP_INTER=$(mktemp /tmp/cliff_inter_XXXXXX.mlir)
 TMP_LLVM_MLIR=$(mktemp /tmp/cliff_llvm_XXXXXX.mlir)
 TMP_LL=$(mktemp /tmp/cliff_XXXXXX.ll)
 
-cleanup() { rm -f "$TMP_MLIR" "$TMP_LLVM_MLIR" "$TMP_LL"; }
+cleanup() { rm -f "$TMP_MLIR" "$TMP_INTER" "$TMP_LLVM_MLIR" "$TMP_LL"; }
 # trap cleanup EXIT
 
 python3 - <<EOF
@@ -21,17 +22,24 @@ import re, sys
 with open("$TEMPLATE") as f:
     src = f.read()
 
-src = src.replace("NUM_ELS", str($NUM_ELS)) \
-            .replace("LAYOUT", """$LAYOUT""")
+src = src.replace("NUM_ELS", str($NUM_ELS))
             
 with open("$TMP_MLIR", "w") as f:
     f.write(src)
 EOF
 
-echo "Generated MLIR:      $TMP_MLIR"
+"$SCRIPT_DIR/../../../build/bin/cliff-opt" "$TMP_MLIR" \
+    --geometric-type-conversion --convert-cliff-to-cliffGPU \
+| python3 -c "
+import sys, re
+src = sys.stdin.read()
+print(re.sub(r'(#clg\.linear<)\{.*?\}(>)', r'\1${LAYOUT}\2', src))
+" > "$TMP_INTER"
+
+echo "Generated MLIR:      $TMP_INTER"
 
 # ── 2. MLIR → LLVM dialect ───────────────────────────────────────
-"$SCRIPT_DIR/../../../build/bin/cliff-opt" "$TMP_MLIR" \
+"$SCRIPT_DIR/../../../build/bin/cliff-opt" "$TMP_INTER" \
     --convert-cliffGPU-to-llvm -split-input-file> "$TMP_LLVM_MLIR"
 
 echo "Generated LLVM MLIR: $TMP_LLVM_MLIR"
