@@ -372,24 +372,25 @@ def test_rotate_appl(case, cuda_ctx):
     name, N, els_per_thread = case
 
     mv_x = mv_point; mv_y = mv_point; mv_alpha = mv_scalar
-    comps_x = 4; comps_y = 4; comps_alpha = 1; comps_c = 4
+    comps_x = 3; comps_y = 3; comps_alpha = 1; comps_c = 3
 
     layout = generate_layout(N, els_per_thread)
     total_threads = N // els_per_thread
     num_blocks = max(total_threads//256, 1)
     num_threads = min(total_threads, 256)
 
-    generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c)
+    generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c, "pga2d")
     result_host = np.zeros(N * comps_c, dtype=np.float32)
     
-    X = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_x.npz")['arr_0']
-    Y = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_y.npz")['arr_0']
+    X = np.load(f"numerical/matrices/{MODE}/rotation_appl/{N}/matrix_x.npz")['arr_0']
+    Y = np.load(f"numerical/matrices/{MODE}/rotation_appl/{N}/matrix_y.npz")['arr_0']
     #! todo: study why this happens
-    X = X.reshape(comps_x, N)[[0, 2, 1, 3]]
-    Y = Y.reshape(comps_y, N)[[0, 2, 1, 3]]
 
-    alpha = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_alpha.npz")['arr_0']
-    expected = np.load(f"numerical/matrices/rotation_appl/{N}/matrix_c.npz")['arr_0']
+    X = X.reshape(comps_x, N)[[1, 0, 2]]
+    Y = Y.reshape(comps_y, N)[[1, 0, 2]]
+
+    alpha = np.load(f"numerical/matrices/{MODE}/rotation_appl/{N}/matrix_alpha.npz")['arr_0']
+    expected = np.load(f"numerical/matrices/{MODE}/rotation_appl/{N}/matrix_c.npz")['arr_0']
 
     # generate ptx for case
     subprocess.run(["./numerical/scripts/pga2d/compile_end_to_end.sh", str(N), layout, "output.ptx"])
