@@ -36,6 +36,7 @@ cleanOutput.mlir
 docs.md
 ideas.md
 output.ll
+*.gif
 output.mlir
 *.pyc
 *.npz
