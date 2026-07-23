@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NUM_ELS=$1
-LAYOUT=$2
-OUT_PTX=${3:-output.ptx}
+MASK_A=$1
+MASK_B=$2
+MASK_C=$3
+MASK_D=$4
+NUM_ELS=$5
+LAYOUT=$6
+OUT_PTX=${7:-output.ptx}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATE="$SCRIPT_DIR/../../samples/pga2d/cliff_to_llvm.mlir"

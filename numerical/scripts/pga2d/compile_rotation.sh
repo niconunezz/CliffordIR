@@ -2,9 +2,13 @@
 # compile_case.sh <mask_a> <mask_b> <mask_c> [output_ptx]
 
 set -euo pipefail
-NUM_ELS=$1
-LAYOUT=$2
-OUT_PTX=${3:-output.ptx}
+#todo: take masks out here just to have same params for each test
+MASK_A=$1
+MASK_B=$2
+MASK_C=$3
+NUM_ELS=$4
+LAYOUT=$5
+OUT_PTX=${6:-output.ptx}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATE="$SCRIPT_DIR/../../samples/pga2d/rotation.mlir"

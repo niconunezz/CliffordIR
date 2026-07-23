@@ -1,135 +1,111 @@
 import numpy as np
-import math 
-import os
+from helpers import ObjectType, GeometricObj
 
-def initialize_matrix(comps, N):
-    return np.random.rand(comps, N).astype(np.float32)
+class MatrixGenerator():
+    def __init__(self, mvs, comps, objTys, geoTys,
+                 comps_c, objTy_c, geoTy_c, algebra : str, N : int, func,
+                 saving_path = "numerical/matrices"):
+        self.__algebra = algebra
+        self.__num_els = N
+        self.__mvs = mvs
+        self.__comps = comps
+        self.__objTys = objTys
+        self.__geoTys = geoTys
+        self.__matrices = self.init_matrices()
+        self.__comps_c = comps_c
+        self.__objTy_c = objTy_c
+        self.__geoTy_c = geoTy_c
+        self.__func = func
+        self.__saving_path = saving_path 
+        self.__matrix_c = self.init_matrix_c()
 
+    def get_mvs(self):
+        return self.__mvs
+    def get_comps(self):
+        return self.__comps
 
-def extract_geo_prod_comps(mv_a, mv_b, matrix_a, matrix_b, comps_c):
-    # get indices for a regular a*b (comps_c non zero components)
-    i = 0
-    cond = True
-    while (cond):
-        mv0 = mv_a(*matrix_a[:, i])
-        mv1 = mv_b(*matrix_b[:, i])
-        mv_out= (mv0 * mv1)
+    def get_comp_c(self):
+        return self.__comps_c
+    
+    def get_num_els(self):
+        return self.__num_els
+
+    def get_func(self):
+        return self.__func
+
+    def get_geoTys(self):
+        return self.__geoTys 
+
+    def get_saving_path(self):
+        return self.__saving_path
+
+    def init_matrices(self):
+        matrices = []
+        for (mv, comp, objTy, geoTy) in zip(self.__mvs,
+                                            self.__comps,
+                                            self.__objTys,
+                                            self.__geoTys):
+
+            matrix = self.__initialize_random_matrix(comp)
+            if objTy == ObjectType.Unknown:
+                matrix = self.__initialize_random_matrix(comp)
+
+            if (self.__algebra == "pga2d"):
+                if objTy == ObjectType.Euclidean:
+                    match geoTy:
+                        case GeometricObj.Point:
+                            matrix[-1, :] = 1
+
+            if (self.__algebra == "pga3d"):
+                if objTy == ObjectType.Euclidean:
+                    match geoTy:
+                        case GeometricObj.Line:
+                            ...
+                        
+
+            matrices.append(matrix)
+
+        return matrices
+
+    def init_matrix_c(self):
+        # if self.__objTy_c == ObjectType.Unknown:
+        return np.empty((self.__comps_c, self.__num_els), dtype=np.float32)
+    
+    def __initialize_random_matrix(self, comps):
+        return np.random.rand(comps, self.__num_els).astype(np.float32)
+
+    def __extract_comps(self):
+        # get indices for a regular a*b (comps_c non zero components)
+        i = 0
+
+        params = []
+        for (mv, matrix) in zip(self.__mvs, self.__matrices):
+            params.append(mv(*matrix[:, i]))
+
+        mv_out = self.__func(*params)
         vals = mv_out.value
         c_default_indices = np.nonzero(vals)[0]
         coeffs = vals[c_default_indices]
-        i += 1
-        if (len(coeffs) == comps_c):
-            cond=False
-    
-    return np.nonzero(mv0.value)[0], np.nonzero(mv1.value)[0], c_default_indices
+        assert (len(coeffs) == self.__comps_c), "c_default_indices are wrong"
 
+        return [np.nonzero(multivector.value)[0] for multivector in params], c_default_indices
 
-def geo_prod_reverse(mv_a, mv_b):
-    return ~(mv_a * mv_b)
+    def generate_matrices(self):
 
+        input_indices, c_default_indices = self.__extract_comps()
+        for j in range(self.__num_els):
+            applied_mvs = [mv_func(*matrix[:, j])for (mv_func, matrix) in zip(self.__mvs, self.__matrices)]
 
-def rotate(mv_a, mv_alpha):
-    return math.e**(mv_alpha * mv_a)
+            mv_out= self.__func(*applied_mvs)
+            self.__matrix_c[:, j] = mv_out.value[c_default_indices]
 
-def complete_rotation(mv_x, mv_y, mv_alpha):
-    R = math.e**(mv_alpha*mv_x)
-    return R*mv_y*~R
+            if (j == 0):
+                for print_idx, mv in enumerate(applied_mvs):
+                    print(f"mv{print_idx} : {mv}") 
+                print(f"out : {mv_out}")
 
-def generate_geo_prods_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c):
+        for idx, matrix in enumerate(self.__matrices):
+            np.savez(f"{self.__saving_path}/matrix_{idx}", matrix)
 
-    C = np.empty((comps_c, N), dtype=np.float32)
-    matrix_a = initialize_matrix(comps_a, N)
-    matrix_b = initialize_matrix(comps_b, N)
-
-    a_default_indices, b_default_indices, c_default_indices = extract_geo_prod_comps(mv_a, mv_b, matrix_a, matrix_b, comps_c)
-
-    for j in range(N):
-
-        mv0 = mv_a(*matrix_a[:, j])
-        mv1 = mv_b(*matrix_b[:, j])
-        mv_out= geo_prod_reverse(mv0, mv1)
-        vals = mv_out.value
-        coeffs = vals[c_default_indices]
-
-        if (j == 0):  print(f"mv0 : {mv0}") ; print(f"mv1 : {mv1}") ;  print(f"out : {mv_out}")
-
-        for i in range(comps_c): 
-            C[i, j] = coeffs[i]
-
-    np.savez("numerical/matrices/matrix_a", matrix_a.flatten())
-    np.savez("numerical/matrices/matrix_b", matrix_b.flatten())
-    np.savez("numerical/matrices/matrix_c", C.flatten())
-    
-    return c_default_indices, a_default_indices, b_default_indices
-
-
-def generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c, mode):
-
-    C = np.empty((comps_c, N), dtype=np.float32)
-    matrix_a = initialize_matrix(comps_a, N)
-    matrix_b = initialize_matrix(comps_b, N)
-
-    for j in range(N):
-        mv0 = mv_a(*matrix_a[:, j])
-        mv1 = mv_b(*matrix_b[:, j])
-        mv_out= rotate(mv0, mv1)
-        vals = mv_out.value
-
-        coeffs = vals[[0, 4, 5, 6]]
-
-        if (j == 0):  print(f"mv0 : {mv0}");  print(f"mv0 : {mv0.value}") ; print(f"mv1 : {mv1}") ;  print(f"out : {mv_out}")
-
-        for i in range(comps_c): 
-            C[i, j] = coeffs[i]
-
-    # force euclidean point : x*e01 + y*e02 + e12 
-    matrix_a[-1, :] = 1
-
-    np.savez(f"numerical/matrices/{mode}/rotation/matrix_a", matrix_a.flatten())
-    np.savez(f"numerical/matrices/{mode}/rotation/matrix_b", matrix_b.flatten())
-    np.savez(f"numerical/matrices/{mode}/rotation/matrix_c", C.flatten())
-
-
-coeffs_indices = {
-    "pga2d" : [0, 4, 5, 6],
-    "pga3d" : [0, 5, 6, 7, 11, 12, 13, 14]}
-
-
-def generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c, mode : str):
-
-    dir_name = f"numerical/matrices/{mode}/rotation_appl/{N}"
-    if os.path.isdir(dir_name):
-        return
-
-    C = np.empty((comps_c, N), dtype=np.float32)
-    matrix_x = initialize_matrix(comps_x, N)
-    matrix_y = initialize_matrix(comps_y, N)
-
-    matrix_alpha = np.random.randn(comps_alpha, N).astype(np.float32)
-
-    for j in range(N):
-        mvx = mv_x(*matrix_x[:, j])
-        mvy = mv_y(*matrix_y[:, j])
-
-        mvalpha = mv_alpha(*matrix_alpha[:, j])
-        mv_out= complete_rotation(mvx, mvy, mvalpha)
-        vals = mv_out.value
-        
-        coeffs = vals[coeffs_indices[mode]]
-
-        if (j == 0):  print(f"mvx : {mvx}");  print(f"mvy : {mvy}") ; print(f"mvalpha : {mvalpha}") ;  print(f"out : {mv_out}")
-
-        for i in range(comps_c):
-            C[i, j] = coeffs[i]
-
-    # force euclidean point
-    #! we assume here that the last multivector is the one with coeff==1, 
-    # not really sure though
-    matrix_x[-1, :] = 1
-    matrix_y[-1, :] = 1
-
-    os.makedirs(f"numerical/matrices/{mode}/rotation_appl/{N}")
-    np.savez(f"numerical/matrices/{mode}/rotation_appl/{N}/matrix_x", matrix_x.flatten())
-    np.savez(f"numerical/matrices/{mode}/rotation_appl/{N}/matrix_y", matrix_y.flatten())
-    np.savez(f"numerical/matrices/{mode}/rotation_appl/{N}/matrix_alpha", matrix_alpha.flatten())
-    np.savez(f"numerical/matrices/{mode}/rotation_appl/{N}/matrix_c", C.flatten())
+        np.savez(f"{self.__saving_path}/matrix_c", self.__matrix_c)
+        return c_default_indices, input_indices

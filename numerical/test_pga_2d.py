@@ -1,11 +1,14 @@
-from generate_oracle import generate_geo_prods_matrices, generate_rotate_matrices, generate_rotate_appl_matrices
 import pytest
 import numpy as np
 import pycuda.driver as cuda
+from helpers import ObjectType, GeometricObj
+from generate_oracle import MatrixGenerator
 import subprocess
-import random
+import math
 from clifford import Cl
+from helpers import to_mask, init_device, generate_layout
 DEBUG = True
+
 
 MODE = "pga2d"
 layout, blades = Cl(2, 0, 1, firstIdx=0)
@@ -63,50 +66,8 @@ mve0e012   = lambda a,b,c    : a + b*e0  + c*e012
 mve1e012   = lambda a,b,c    : a + b*e1  + c*e012
 
 mve0e1e2e01e02e12e012 = lambda a, b, c, d ,e , f, g, h : a + b*e0 + c*e1 + d*e2 + e*e01 + f*e02 + g*e12 + h*e012
-mv_point = lambda b, c, _ : b*e02 + c*e01 + e12
+mv_point = lambda b, c, _ : b*e01 + c*e02 + e12
 mv_scalar = lambda a : a*e1*e1
-
-def to_mask(arr):
-    out = 0
-    for i, el in enumerate(arr):
-        if el != 0:
-            out += 2**i
-    return out
-
-def init_device(ptx, matrices, result, func_name):
-    mod  = cuda.module_from_buffer(ptx.encode())
-    # device init
-    
-    dev_matrices = [cuda.mem_alloc(m.nbytes) for m in matrices]
-    result_dev = cuda.mem_alloc(result.nbytes)
-    for dev_m, m in zip(dev_matrices, matrices) :  cuda.memcpy_htod(dev_m, m)
-
-    func = mod.get_function(func_name)
-    return func, dev_matrices, result_dev
-
-import math
-def generate_layout(N: int, els_per_thread: int) -> str:
-    assert N >= 32, "N must be at least 32"
-
-    def dim_entries(count: int, start: int) -> tuple[str, int]:
-        if count <= 1:
-            return "[]", start
-        steps = int(math.log2(count))
-        entries = [f"[{start << k}]" for k in range(steps)]
-        return "[" + ", ".join(entries) + "]", start << steps
-
-    i = 1
-    total_threads = N // els_per_thread
-
-    register,  i = dim_entries(els_per_thread, i)
-    lane,      i = dim_entries(min(total_threads, 32), i)
-    warp,      i = dim_entries(min(8, total_threads // 32), i)
-    block,     i = dim_entries(total_threads // 256, i)
-
-    return f"{{register = {register}, lane = {lane}, warp = {warp}, block = {block}}}"
-
-
-
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -118,218 +79,198 @@ def cuda_ctx():
     ctx.pop()
 
 CASES = [
-    ("scalar_e0e1e2",  mv_scalar, mve0e1e2, 1, 4, 4, 64, 1),
-    ("e12__e12",       mve12,    mve12,    2, 2, 2, 128, 1),
-    ("e12__e12",       mve12,    mve12,    2, 2, 2, 4096, 16),
-    ("e02__e02",       mve02,    mve02,    2, 2, 2, 64, 1),
-    ("e01__e01",       mve01,    mve01,    2, 2, 2, 128, 4),
-    ("e01e02__e01e02", mve01e02, mve01e02, 3, 3, 3, 64, 1),
-    ("e01e12__e01e12", mve01e12, mve01e12, 3, 3, 4, 64, 1),
-    ("e02e12__e02e12", mve02e12, mve02e12, 3, 3, 4, 4096, 4),
-    ("e1e12__e0e01",   mve1e12,  mve0e01,  3, 3, 7, 64, 1),
-    ("full__full",     mvfull,   mvfull,   4, 4, 4, 128, 4),
-    ("scalar__full",   lambda a: a*e1*e1,  mvfull, 1, 4, 4, 64, 1),
-    ("full__scalar",   mvfull,  lambda a: a*e1*e1, 4, 1, 4, 64, 1),
-    ("complete__complete", mve0e1e2e01e02e12e012, mve0e1e2e01e02e12e012, 8, 8, 8, 128, 1),
+    ("scalar_e0e1e2",  [mv_scalar, mve0e1e2], [1, 4], 4, 64, 1),
+    ("e12__e12",       [mve12, mve12], [2, 2], 2, 128, 1),
+    ("e12__e12",       [mve12, mve12], [2, 2], 2, 4096, 16),
+    ("e02__e02",       [mve02, mve02], [2, 2], 2, 64, 1),
+    ("e01__e01",       [mve01, mve01], [2, 2], 2, 128, 4),
+    ("e01e02__e01e02", [mve01e02, mve01e02], [3, 3], 3, 64, 1),
+    ("e01e12__e01e12", [mve01e12, mve01e12], [3, 3], 4, 64, 1),
+    ("e02e12__e02e12", [mve02e12, mve02e12], [3, 3], 4, 4096, 4),
+    ("e1e12__e0e01",   [mve1e12, mve0e01], [3, 3], 7, 64, 1),
+    ("full__full",     [mvfull, mvfull], [4, 4], 4, 128, 4),
+    ("scalar__full",   [lambda a: a*e1*e1, mvfull], [1, 4], 4, 64, 1),
+    ("full__scalar",   [mvfull, lambda a: a*e1*e1], [4, 1], 4, 64, 1),
+    ("complete__complete", [mve0e1e2e01e02e12e012, mve0e1e2e01e02e12e012], [8, 8], 8, 128, 1),
 
-    ("e0__e0",         mve0,     mve0,     2, 2, 2, 64, 1),
-    ("e1__e1",         mve1,     mve1,     2, 2, 2, 64, 1),
-    ("e2__e2",         mve2,     mve2,     2, 2, 2, 64, 2),
-    ("e0__e1",         mve0,     mve1,     2, 2, 4, 4096, 16),
-    ("e1__e2",         mve1,     mve2,     2, 2, 4, 512, 4),
-    ("e0__e2",         mve0,     mve2,     2, 2, 4, 128, 1),
-    ("e0e1__e0e2",     mve0e1,   mve0e2,   3, 3, 7, 64, 2),
-    ("e0e1__e1e2",     mve0e1,   mve1e2,   3, 3, 7, 8192, 4),
-    ("e0e2__e1e2",     mve0e2,   mve1e2,   3, 3, 7, 4096, 4),
-    ("e0e1e2__e0e1e2", mve0e1e2, mve0e1e2, 4, 4, 7, 512, 2),
-    ("e0__e01",        mve0,     mve01,    2, 2, 3, 1024, 8),
-    ("e1__e12",        mve1,     mve12,    2, 2, 4, 32, 1),
-    ("e2__e02",        mve2,     mve02,    2, 2, 4, 64, 1),
-    ("e0e1__e12",      mve0e1,   mve12,    3, 2, 6, 64, 1),
-    ("e0e2__e12",      mve0e2,   mve12,    3, 2, 6, 64, 2),
-    ("e1e2__e12",      mve1e2,   mve12,    3, 2, 4, 4096, 1),
-    ("e0e1e2__full",   mve0e1e2, mvfull,   4, 4, 8, 64, 2),
-    ("e12__e1",        mve12,    mve1,     2, 2, 4, 64, 1),
-    ("e01__e0",        mve01,    mve0,     2, 2, 3, 512, 8),
-    ("full__e0e1e2",   mvfull,   mve0e1e2, 4, 4, 8, 4096, 1),
+    ("e0__e0",         [mve0, mve0], [2, 2], 2, 64, 1),
+    ("e1__e1",         [mve1, mve1], [2, 2], 2, 64, 1),
+    ("e2__e2",         [mve2, mve2], [2, 2], 2, 64, 2),
+    ("e0__e1",         [mve0, mve1], [2, 2], 4, 4096, 16),
+    ("e1__e2",         [mve1, mve2], [2, 2], 4, 512, 4),
+    ("e0__e2",         [mve0, mve2], [2, 2], 4, 128, 1),
+    ("e0e1__e0e2",     [mve0e1, mve0e2], [3, 3], 7, 64, 2),
+    ("e0e1__e1e2",     [mve0e1, mve1e2], [3, 3], 7, 8192, 4),
+    ("e0e2__e1e2",     [mve0e2, mve1e2], [3, 3], 7, 4096, 4),
+    ("e0e1e2__e0e1e2", [mve0e1e2, mve0e1e2], [4, 4], 7, 512, 2),
+    ("e0__e01",        [mve0, mve01], [2, 2], 3, 1024, 8),
+    ("e1__e12",        [mve1, mve12], [2, 2], 4, 32, 1),
+    ("e2__e02",        [mve2, mve02], [2, 2], 4, 64, 1),
+    ("e0e1__e12",      [mve0e1, mve12], [3, 2], 6, 64, 1),
+    ("e0e2__e12",      [mve0e2, mve12], [3, 2], 6, 64, 2),
+    ("e1e2__e12",      [mve1e2, mve12], [3, 2], 4, 4096, 1),
+    ("e0e1e2__full",   [mve0e1e2, mvfull], [4, 4], 8, 64, 2),
+    ("e12__e1",        [mve12, mve1], [2, 2], 4, 64, 1),
+    ("e01__e0",        [mve01, mve0], [2, 2], 3, 512, 8),
+    ("full__e0e1e2",   [mvfull, mve0e1e2], [4, 4], 8, 4096, 1),
 
-    ("e012__scalar",   mve012,   lambda a: a*e1*e1, 2, 1, 2, 64, 1),
-    ("e012__e012",     mve012,   mve012,   2, 2, 2, 64, 1),
-    ("e012__e0",       mve012,   mve0,     2, 2, 3, 64, 1),
-    ("e012__e1",       mve012,   mve1,     2, 2, 4, 64, 1),
-    ("e012__e0e1e2",   mve012,   mve0e1e2, 2, 4, 7, 512, 1),
-    ("e012__e01",      mve012,   mve01,    2, 2, 3, 1024, 8),
-    ("e012__e12",      mve012,   mve12,    2, 2, 4, 8192, 1),
-    ("e012__full",     mve012,   mvfull,   2, 4, 6, 64, 1),
+    ("e012__scalar",   [mve012, lambda a: a*e1*e1], [2, 1], 2, 64, 1),
+    ("e012__e012",     [mve012, mve012], [2, 2], 2, 64, 1),
+    ("e012__e0",       [mve012, mve0], [2, 2], 3, 64, 1),
+    ("e012__e1",       [mve012, mve1], [2, 2], 4, 64, 1),
+    ("e012__e0e1e2",   [mve012, mve0e1e2], [2, 4], 7, 512, 1),
+    ("e012__e01",      [mve012, mve01], [2, 2], 3, 1024, 8),
+    ("e012__e12",      [mve012, mve12], [2, 2], 4, 8192, 1),
+    ("e012__full",     [mve012, mvfull], [2, 4], 6, 64, 1),
 
-    ("e01e012__e01e012",     mve01e012, mve01e012,    3, 3, 3, 512, 1),
-    ("e12e012__e12e012",     mve12e012, mve12e012,    3, 3, 4, 64, 1),
-    ("full_e012__full_e012", mvfull_e012, mvfull_e012, 5, 5, 6, 64, 1),
-    ("e0e1e2__e01e02e012",   mve0e1e2,  mve01e02e012, 4, 4, 7, 64, 1),
+    ("e01e012__e01e012",     [mve01e012, mve01e012], [3, 3], 3, 512, 1),
+    ("e12e012__e12e012",     [mve12e012, mve12e012], [3, 3], 4, 64, 1),
+    ("full_e012__full_e012", [mvfull_e012, mvfull_e012], [5, 5], 6, 64, 1),
+    ("e0e1e2__e01e02e012",   [mve0e1e2, mve01e02e012], [4, 4], 7, 64, 1),
 
-    ("e0e012__e0e012",   mve0e012, mve0e012, 3, 3, 3, 64, 1),
-    ("e1e012__e1e012",   mve1e012, mve1e012, 3, 3, 4, 512, 1),
-    ("e0e012__full",     mve0e012, mvfull,   3, 4, 6, 4096, 4),
-    ("e1e012__full",     mve1e012, mvfull,   3, 4, 8, 8192, 1),
+    ("e0e012__e0e012",   [mve0e012, mve0e012], [3, 3], 3, 64, 1),
+    ("e1e012__e1e012",   [mve1e012, mve1e012], [3, 3], 4, 512, 1),
+    ("e0e012__full",     [mve0e012, mvfull], [3, 4], 6, 4096, 4),
+    ("e1e012__full",     [mve1e012, mvfull], [3, 4], 8, 8192, 1),
 
-    ("e0e12__e0e12",         mve0e12,   mve0e12,   3, 3, 4, 512, 1),
-    ("e0e12__full",          mve0e12,   mvfull,    3, 4, 6, 8192, 1),
-    ("e1e01__e1e01",         mve1e01,   mve1e01,   3, 3, 4, 4096, 1),
-    ("e1e02__e2e01",         mve1e02,   mve2e01,   3, 3, 7, 32, 1),
-    ("e0e1e01__e0e1e01",     mve0e1e01, mve0e1e01, 4, 4, 4, 512, 1),
-    ("e0e1e12__e1e2e12",     mve0e1e12, mve1e2e12, 4, 4, 8, 128, 4),
-    ("e0e1e2__e01e02e12",    mve0e1e2,  mvfull,    4, 4, 8, 4096, 1),
+    ("e0e12__e0e12",         [mve0e12, mve0e12], [3, 3], 4, 512, 1),
+    ("e0e12__full",          [mve0e12, mvfull], [3, 4], 6, 8192, 1),
+    ("e1e01__e1e01",         [mve1e01, mve1e01], [3, 3], 4, 4096, 1),
+    ("e1e02__e2e01",         [mve1e02, mve2e01], [3, 3], 7, 32, 1),
+    ("e0e1e01__e0e1e01",     [mve0e1e01, mve0e1e01], [4, 4], 4, 512, 1),
+    ("e0e1e12__e1e2e12",     [mve0e1e12, mve1e2e12], [4, 4], 8, 128, 4),
+    ("e0e1e2__e01e02e12",    [mve0e1e2, mvfull], [4, 4], 8, 4096, 1),
 ]
 
+def get_masks(mvs, comps, comps_c, func, can_to_bit_perm):
+    sample_coeffs = [mv(*np.random.randn((comp))) for mv, comp in zip(mvs, comps)]
+    c_sample = func(*sample_coeffs)
+    masks = []
+    for sample, comp in zip(sample_coeffs, comps):
+        masks.append(str(to_mask(sample.as_array()[can_to_bit_perm], comp)))
+    masks.append(str(to_mask(c_sample.as_array()[can_to_bit_perm], comps_c)))
 
-@pytest.mark.parametrize("case", CASES, ids=[c[0] for c in CASES])
-def test_geo_prod(case, cuda_ctx):
-    name, mv_a, mv_b, comps_a, comps_b, comps_c, N, els_per_thread = case
+    return masks
+    
 
-    layout = generate_layout(N, els_per_thread)
+def run_bash(num_els, els_per_thread, masks, bash_file_path):
+    layout = generate_layout(num_els, els_per_thread)
+    print(f"layout : {layout}")
+    subprocess.run([bash_file_path, *masks, str(num_els), layout, "output.ptx"])
+
+# change from canonical -> bitmap layout, see explanation in cliffOps.cpp
+def canonical_to_bitmap(matrices, c_default_indices, in_default_indices, can_to_bit_perm):
+    in_adapted_masks = [can_to_bit_perm[default_indices].argsort() for default_indices in in_default_indices]
+    permuted_matrices = [matrix[adapted_mask, :].flatten() for (matrix, adapted_mask) in zip(matrices, in_adapted_masks)]
+    adapted_mask_c = can_to_bit_perm[c_default_indices].argsort()
+    return permuted_matrices, adapted_mask_c
+    
+def run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread, can_to_bit_perm, op_name, gfunc, matrixGen, bash_compile_path):
+    
+    c_default_indices, in_matrices = matrixGen.generate_matrices()
+    num_mvs = len(mvs)
+    masks = get_masks(mvs, comps, comps_c, gfunc, can_to_bit_perm)
+    run_bash(N, els_per_thread, masks, bash_compile_path)
+    c_default_indices, in_default_indices = matrixGen.generate_matrices()
+    matrices = [np.load(f"{matrixGen.get_saving_path()}/matrix_{i}.npz")['arr_0'] for i in range(num_mvs)]
+    
+    # change from canonical -> bitmap layout, see explanation in cliffOps.cpp
+    permuted_matrices, adapted_mask_c = canonical_to_bitmap(matrices, c_default_indices, in_default_indices, can_to_bit_perm)
+
+    with open("output.ptx", "r") as f:
+        ptx = f.read()
+    result_host = np.zeros(N * comps_c, dtype=np.float32)
+    func, dev_matrices, result_dev = init_device(ptx, permuted_matrices, result_host, op_name)
+
     total_threads = N // els_per_thread
     num_blocks = max(total_threads//(256), 1)
     num_threads = min(total_threads, 256)
 
-    #todo: cache it if neccesary
-    c_default_indices, a_default_indices, b_default_indices= generate_geo_prods_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c)
-    result_host = np.zeros(N * comps_c, dtype=np.float32)
-    
-    mask_perm = [0, 1, 2, 4, 3, 5, 6, 7]
-    np_mask_perm = np.array(mask_perm)
-    adapted_mask_c = np_mask_perm[c_default_indices].argsort()
-    adapted_mask_a = np_mask_perm[a_default_indices].argsort()
-    adapted_mask_b = np_mask_perm[b_default_indices].argsort()
-    A = np.load("numerical/matrices/matrix_a.npz")['arr_0']
-    B = np.load("numerical/matrices/matrix_b.npz")['arr_0']
-
-    # change from canonical -> bitmap layout, see explanation in cliffOps.cpp
-
-    A = A.reshape(comps_a, N)[adapted_mask_a, :]
-    A = A.flatten()
-
-    B = B.reshape(comps_b, N)[adapted_mask_b, :]
-    B = B.flatten()
-
-    expected = np.load("numerical/matrices/matrix_c.npz")['arr_0']
-   
-
-    a_sample_coeffs = [random.randint(2, 399) for _ in range(comps_a)]
-    b_sample_coeffs = [random.randint(2, 399) for _ in range(comps_b)]
-    a_sample = mv_a(*a_sample_coeffs) ; b_sample = mv_b(*b_sample_coeffs)
-    c_sample = (a_sample * b_sample)
-   
-    mask_mv_a = to_mask(a_sample.as_array()[mask_perm])
-    mask_mv_b = to_mask(b_sample.as_array()[mask_perm])
-    mask_mv_c = to_mask(c_sample.as_array()[mask_perm])
-
-    # generate ptx for case
-    subprocess.run(["./numerical/scripts/pga2d/compile_case.sh", str(mask_mv_a), str(mask_mv_b), str(mask_mv_c), str(N), layout, "output.ptx"])
-
-    with open("output.ptx", "r") as f:
-        ptx = f.read()
-
-    func, dev_matrices, result_dev = init_device(ptx, [A, B], result_host, "geo_prod")
-    A_dev, B_dev = dev_matrices
-
-    func(A_dev, B_dev, result_dev,
+    func(*dev_matrices, result_dev,
      block=(num_threads, 1, 1),
      grid=(num_blocks, 1, 1))
     
     cuda.memcpy_dtoh(result_host, result_dev)
     
+    expected = np.load(f"{matrixGen.get_saving_path()}/matrix_c.npz")['arr_0']
     # change from bitmap layout -> canonical 
     result_host = result_host.reshape(comps_c, N)[adapted_mask_c, :]
-    result_host = result_host.flatten()
-    if DEBUG:
-        if np.allclose(result_host, expected, atol=1e-4):
-            print("✓ CORRECTO")
-        else:
-            diff = np.where(~np.isclose(result_host, expected, atol=1e-4))
-            print(f"A outputs: {A.reshape(comps_a, N)[:, 0]}")
-            print(f"B outputs : {B.reshape(comps_b, N)[:, 0]}")
-            print(f"Kernel outcome : {result_host.reshape(comps_c, N)[:, 0]}")
-            print(f"Expected outcome : {expected.reshape(comps_c, N)[:, 0]}")
-            print(f"✗ INCORRECTO en {len(diff[0]) / (comps_c * N)} de los índices")
-            print(f"✗ INCORRECTO en índices: {diff}")
+    return result_host, expected
 
-            print(f"  got:      {result_host[diff]}")
-            print(f"  expected: {expected[diff]}")
+def print_debug_info(result_host, expected, comps_c, N):
+    diff = np.where(~np.isclose(result_host, expected, atol=1e-4))
+    print(f"Kernel outcome : {result_host.reshape(comps_c, N)[:, 0]}")
+    print(f"Expected outcome : {expected.reshape(comps_c, N)[:, 0]}")
+    print(f"✗ INCORRECTO en {len(diff[0]) / (comps_c * N)} de los índices")
+    print(f"✗ INCORRECTO en índices: {diff}")
+    
+    print(f"  got:      {result_host[diff]}")
+    print(f"  expected: {expected[diff]}")
+
+@pytest.mark.parametrize("case", CASES, ids=[c[0] for c in CASES])
+def test_geo_prod(case, cuda_ctx):
+    name, mvs, comps, comps_c, N, els_per_thread = case
+
+    gfunc = lambda a, b : ~(a * b)
+    matrixGen = MatrixGenerator(mvs,
+                                comps,
+                                [ObjectType.Unknown, ObjectType.Unknown],
+                                [GeometricObj.Unknown, GeometricObj.Unknown],
+                                comps_c, ObjectType.Unknown, GeometricObj.Unknown,
+                                MODE, N, gfunc)
+
+    result_host, expected = run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread,
+                                               np.array([0, 1, 2, 4, 3, 5, 6, 7]), "geo_prod", 
+                                               gfunc, matrixGen, "./numerical/scripts/pga2d/compile_case.sh")
+    
+    if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
+        print_debug_info(result_host, expected, comps_c, N)
 
     assert(np.allclose(result_host, expected, atol=1e-5))
 
 
 CASES_ROTATE = [
-    ("N32_1",       mv_point,    mv_scalar,    3, 1, 4,   32,   1),
-    ("N64_1",       mv_point,    mv_scalar,    3, 1, 4,   64,   1),
-    ("N64_2",       mv_point,    mv_scalar,    3, 1, 4,   64,   2),
-    ("N128_1",      mv_point,    mv_scalar,    3, 1, 4,  128,   1),
-    ("N128_2",      mv_point,    mv_scalar,    3, 1, 4,  128,   2),
-    ("N128_4",      mv_point,    mv_scalar,    3, 1, 4,  128,   4),
-    ("N256_1",      mv_point,    mv_scalar,    3, 1, 4,  256,   1),
-    ("N256_2",      mv_point,    mv_scalar,    3, 1, 4,  256,   2),
-    ("N256_4",      mv_point,    mv_scalar,    3, 1, 4,  256,   4),
-    ("N256_8",      mv_point,    mv_scalar,    3, 1, 4,  256,   8),
-    ("N512_1",      mv_point,    mv_scalar,    3, 1, 4,  512,   1),
-    ("N512_2",      mv_point,    mv_scalar,    3, 1, 4,  512,   2),
-    ("N512_4",      mv_point,    mv_scalar,    3, 1, 4,  512,   4),
-    ("N512_8",      mv_point,    mv_scalar,    3, 1, 4,  512,   8),
-    ("N512_16",     mv_point,    mv_scalar,    3, 1, 4,  512,  16),
-    ("N1024_1",     mv_point,    mv_scalar,    3, 1, 4, 1024,   1),
-    ("N1024_2",     mv_point,    mv_scalar,    3, 1, 4, 1024,   2),
-    ("N1024_4",     mv_point,    mv_scalar,    3, 1, 4, 1024,   4),
-    ("N1024_8",     mv_point,    mv_scalar,    3, 1, 4, 1024,   8),
-    ("N1024_16",    mv_point,    mv_scalar,    3, 1, 4, 1024,  16),
+    ("N32_1",       [mv_point,    mv_scalar],    [3, 1], 4,   32,   1),
+    ("N64_1",       [mv_point,    mv_scalar],    [3, 1], 4,   64,   1),
+    ("N64_2",       [mv_point,    mv_scalar],    [3, 1], 4,   64,   2),
+    ("N128_1",      [mv_point,    mv_scalar],    [3, 1], 4,  128,   1),
+    ("N128_2",      [mv_point,    mv_scalar],    [3, 1], 4,  128,   2),
+    ("N128_4",      [mv_point,    mv_scalar],    [3, 1], 4,  128,   4),
+    ("N256_1",      [mv_point,    mv_scalar],    [3, 1], 4,  256,   1),
+    ("N256_2",      [mv_point,    mv_scalar],    [3, 1], 4,  256,   2),
+    ("N256_4",      [mv_point,    mv_scalar],    [3, 1], 4,  256,   4),
+    ("N256_8",      [mv_point,    mv_scalar],    [3, 1], 4,  256,   8),
+    ("N512_1",      [mv_point,    mv_scalar],    [3, 1], 4,  512,   1),
+    ("N512_2",      [mv_point,    mv_scalar],    [3, 1], 4,  512,   2),
+    ("N512_4",      [mv_point,    mv_scalar],    [3, 1], 4,  512,   4),
+    ("N512_8",      [mv_point,    mv_scalar],    [3, 1], 4,  512,   8),
+    ("N512_16",     [mv_point,    mv_scalar],    [3, 1], 4,  512,  16),
+    ("N1024_1",     [mv_point,    mv_scalar],    [3, 1], 4, 1024,   1),
+    ("N1024_2",     [mv_point,    mv_scalar],    [3, 1], 4, 1024,   2),
+    ("N1024_4",     [mv_point,    mv_scalar],    [3, 1], 4, 1024,   4),
+    ("N1024_8",     [mv_point,    mv_scalar],    [3, 1], 4, 1024,   8),
+    ("N1024_16",    [mv_point,    mv_scalar],    [3, 1], 4, 1024,  16),
 ]
 
 @pytest.mark.parametrize("case", CASES_ROTATE, ids=[c[0] for c in CASES_ROTATE])
 def test_rotate(case, cuda_ctx):
-    name , mv_a, mv_b, comps_a, comps_b, comps_c, N, els_per_thread = case
+    name , mvs, comps, comps_c, N, els_per_thread = case
+    gfunc = lambda mv_a, mv_alpha : math.e**(mv_alpha * mv_a)
 
-    layout = generate_layout(N, els_per_thread)
-    total_threads = N // els_per_thread
-    num_blocks = max(total_threads//(256), 1)
-    num_threads = min(total_threads, 256)
-    #todo: cache it if neccesary
-    generate_rotate_matrices(N, mv_a, mv_b, comps_a, comps_b, comps_c, MODE)
-    result_host = np.zeros(N * comps_c, dtype=np.float32)
-    
-    A = np.load(f"numerical/matrices/{MODE}/rotation/matrix_a.npz")['arr_0']
-    A = A.reshape(comps_a, N)
-    B = np.load(f"numerical/matrices/{MODE}/rotation/matrix_b.npz")['arr_0']
+    matrixGen = MatrixGenerator(mvs,
+                                comps,
+                                [ObjectType.Euclidean, ObjectType.Unknown],
+                                [GeometricObj.Point, GeometricObj.Scalar],
+                                comps_c, ObjectType.Unknown, GeometricObj.Motor,
+                                MODE, N, gfunc, f"numerical/matrices/{MODE}/rotation")
 
-    expected = np.load(f"numerical/matrices/{MODE}/rotation/matrix_c.npz")['arr_0']
+    result_host, expected = run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread,
+                                                np.array([0, 1, 2, 4, 3, 5, 6, 7]), "rotation",
+                                                gfunc, matrixGen,
+                                                "./numerical/scripts/pga2d/compile_rotation.sh")
 
-    # generate ptx for case
-    subprocess.run(["./numerical/scripts/pga2d/compile_rotation.sh", str(N), layout, "output.ptx"])
-
-    with open("output.ptx", "r") as f:
-        ptx = f.read()
-    
-    func, dev_matrices, result_dev = init_device(ptx, [A, B], result_host, "rotation")
-    A_dev, B_dev = dev_matrices 
-
-    func(A_dev, B_dev, result_dev,
-     block=(num_threads, 1, 1),
-     grid=(num_blocks, 1, 1))
-    
-    cuda.memcpy_dtoh(result_host, result_dev)    
-    result_host = result_host.reshape(comps_c, N)[[0, 2, 1, 3]]
-    result_host = result_host.flatten()
-    if DEBUG:
-        if np.allclose(result_host, expected, atol=1e-4):
-            print("✓ CORRECTO")
-        else:
-            diff = np.where(~np.isclose(result_host, expected, atol=1e-4))
-            print(f"A outputs: {A.reshape(comps_a, N)[:, 0]}")
-            print(f"B outputs : {B.reshape(comps_b, N)[:, 0]}")
-            print(f"Kernel outcome : {result_host.reshape(comps_c, N)[:, 0]}")
-            print(f"Expected outcome : {expected.reshape(comps_c, N)[:, 0]}")
-            print(f"✗ INCORRECTO en {len(diff[0]) / (comps_c * N)} de los índices")
-            print(f"✗ INCORRECTO en índices: {diff}")
-
-            print(f"  got:      {result_host[diff]}")
-            print(f"  expected: {expected[diff]}")
+    if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
+        print_debug_info(result_host, expected, comps_c, N)
 
     assert(np.allclose(result_host, expected, atol=1e-5))
     
@@ -373,53 +314,26 @@ def test_rotate_appl(case, cuda_ctx):
 
     mv_x = mv_point; mv_y = mv_point; mv_alpha = mv_scalar
     comps_x = 3; comps_y = 3; comps_alpha = 1; comps_c = 3
+    comps = [comps_x, comps_y, comps_alpha]
+    mvs = [mv_x, mv_y, mv_alpha]
 
-    layout = generate_layout(N, els_per_thread)
-    total_threads = N // els_per_thread
-    num_blocks = max(total_threads//256, 1)
-    num_threads = min(total_threads, 256)
+    def gfunc(mv_x, mv_y, mv_alpha):
+        R = math.e**(mv_alpha*mv_x)
+        return R*mv_y*~R
 
-    generate_rotate_appl_matrices(N, mv_x, mv_y, mv_alpha, comps_x, comps_y, comps_alpha, comps_c, "pga2d")
-    result_host = np.zeros(N * comps_c, dtype=np.float32)
-    
-    X = np.load(f"numerical/matrices/{MODE}/rotation_appl/{N}/matrix_x.npz")['arr_0']
-    Y = np.load(f"numerical/matrices/{MODE}/rotation_appl/{N}/matrix_y.npz")['arr_0']
-    #! todo: study why this happens
+    matrixGen = MatrixGenerator(mvs,
+                                comps,
+                                [ObjectType.Euclidean, ObjectType.Euclidean, ObjectType.Unknown],
+                                [GeometricObj.Point, GeometricObj.Point, GeometricObj.Scalar],
+                                comps_c, ObjectType.Unknown, GeometricObj.Point,
+                                MODE, N, gfunc, f"numerical/matrices/{MODE}/rotation_appl/{N}")
 
-    X = X.reshape(comps_x, N)[[1, 0, 2]]
-    Y = Y.reshape(comps_y, N)[[1, 0, 2]]
+    result_host, expected = run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread,
+                                                np.array([0, 1, 2, 4, 3, 5, 6, 7]), "rotation",
+                                                gfunc, matrixGen,
+                                                "./numerical/scripts/pga2d/compile_end_to_end.sh")
 
-    alpha = np.load(f"numerical/matrices/{MODE}/rotation_appl/{N}/matrix_alpha.npz")['arr_0']
-    expected = np.load(f"numerical/matrices/{MODE}/rotation_appl/{N}/matrix_c.npz")['arr_0']
-
-    # generate ptx for case
-    subprocess.run(["./numerical/scripts/pga2d/compile_end_to_end.sh", str(N), layout, "output.ptx"])
-
-    with open("output.ptx", "r") as f:
-        ptx = f.read()
-
-    func, dev_matrices, result_dev = init_device(ptx, [X, Y, alpha], result_host, "rotation")
-    X_dev, Y_dev, alpha_dev = dev_matrices 
-
-    func(X_dev, Y_dev, alpha_dev, result_dev,
-     block=(num_threads, 1, 1),
-     grid=(num_blocks, 1, 1))
-
-    cuda.memcpy_dtoh(result_host, result_dev)
-    if DEBUG:
-        if np.allclose(result_host, expected, atol=1e-4):
-            print("✓ CORRECTO")
-        else:
-            diff = np.where(~np.isclose(result_host, expected, atol=1e-4))
-            print(f"X outputs: {X.reshape(comps_x, N)[:, 0]}")
-            print(f"Y outputs: {Y.reshape(comps_y, N)[:, 0]}")
-            print(f"alpha outputs : {alpha.reshape(comps_alpha, N)[:, 0]}")
-            print(f"Kernel outcome : {result_host.reshape(comps_c, N)[:, 0]}")
-            print(f"Expected outcome : {expected.reshape(comps_c, N)[:, 0]}")
-            print(f"✗ INCORRECTO en {len(diff[0]) / (comps_c * N)} de los índices")
-            print(f"✗ INCORRECTO en índices: {diff}")
-
-            print(f"  got:      {result_host[diff]}")
-            print(f"  expected: {expected[diff]}")
+    if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
+        print_debug_info(result_host, expected, comps_c, N)
 
     assert(np.allclose(result_host, expected, atol=1e-4))
