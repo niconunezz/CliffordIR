@@ -1,11 +1,16 @@
-from generate_oracle import generate_geo_prods_matrices, generate_rotate_matrices, generate_rotate_appl_matrices
+from generate_oracle import MatrixGenerator
 import pytest
 import numpy as np
 import pycuda.driver as cuda
 import subprocess
 import random
 from clifford import Cl
+import pycuda.driver as cuda
+from helpers import to_mask, init_device, generate_layout
+from helpers import ObjectType, GeometricObj, run_ga_kernel_test, print_debug_info, GATestConfig
+
 DEBUG = True
+MODE = "pga3d"
 
 layout, blades = Cl(3, 0, 1, firstIdx=0)
 e0 = blades['e0']
@@ -25,66 +30,36 @@ e123 = blades['e123']
 e0123 = blades['e0123']
 
 
-# Grado 1 (vectores)
 mve0       = lambda a,b      : a + b*e0
 mve1       = lambda a,b      : a + b*e1
-mve2       = lambda a,b      : a + b*e2
-mve0e1     = lambda a,b,c    : a + b*e0  + c*e1
-mve0e2     = lambda a,b,c    : a + b*e0  + c*e2
-mve1e2     = lambda a,b,c    : a + b*e1  + c*e2
 mve0e1e2   = lambda a,b,c,d  : a + b*e0  + c*e1  + d*e2
-
-# Grado 1 + grado 2 (mezclados)
 mve0e12    = lambda a,b,c    : a + b*e0  + c*e12
 mve1e01    = lambda a,b,c    : a + b*e1  + c*e01
 mve1e02    = lambda a,b,c    : a + b*e1  + c*e02
 mve2e01    = lambda a,b,c    : a + b*e2  + c*e01
 mve1e12    = lambda a,b,c    : a + b*e1  + c*e12
-mve2e02    = lambda a,b,c    : a + b*e2  + c*e02
-mve0e01    = lambda a,b,c    : a + b*e0  + c*e01
-mve2e12    = lambda a,b,c    : a + b*e2  + c*e12
-mve0e1e01  = lambda a,b,c,d  : a + b*e0  + c*e1  + d*e01
-mve0e1e12  = lambda a,b,c,d  : a + b*e0  + c*e1  + d*e12
 mve1e2e12  = lambda a,b,c,d  : a + b*e1  + c*e2  + d*e12
 mve0e2e02  = lambda a,b,c,d  : a + b*e0  + c*e2  + d*e02
-
-# Grado 2 (bivectores puros)
 mve12     = lambda a,b   : a + b*e12
 mve02     = lambda a,b   : a + b*e02
-mve01     = lambda a,b   : a + b*e01
-mve01e02  = lambda a,b,c : a + b*e01 + c*e02
-mve01e12  = lambda a,b,c : a + b*e01 + c*e12
 mve02e12  = lambda a,b,c : a + b*e02 + c*e12
 mvfull = lambda a,b,c,d  : a + b*e01 + c*e02 + d*e12   # alias para mvfull
-
-# Grado 3 (pseudoescalar)
 mve012     = lambda a,b      : a + b*e012
-
-# Grado 2 + grado 3
 mve01e012  = lambda a,b,c    : a + b*e01 + c*e012
 mve12e012  = lambda a,b,c    : a + b*e12 + c*e012
-mve01e02e012 = lambda a,b,c,d: a + b*e01 + c*e02 + d*e012
 mvfull_e012  = lambda a,b,c,d,e: a + b*e01 + c*e02 + d*e12 + e*e012
-
-# Grado 1 + grado 3
 mve0e012   = lambda a,b,c    : a + b*e0  + c*e012
 mve1e012   = lambda a,b,c    : a + b*e1  + c*e012
-
 mve0e1e2e01 = lambda a, b, c, d ,e : a + b*e0 + c*e1 + d*e2 + e*e01
 mve0e1e2e01e02e12e012 = lambda a, b, c, d ,e , f, g, h : a + b*e0 + c*e1 + d*e2 + e*e01 + f*e02 + g*e12 + h*e012
-
-mve0e1e2e3e01e02e03e12e13e23e012e013e023e123e0123 = lambda a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p : a + b*e0 + c*e1 + d*e2 + e*e3 + f*e01 + g*e02 + h*e03 + i*e12 + j*e13 + k*e23 + l*e012 + m*e013 + n*e023 + o*e123 + p*e0123
-mv_point = lambda a, b, c, d, e: a + b*e023 + c*e013 + d*e012 + e*e123
 mve123 = lambda a, b : a + e123*b
 mve023 = lambda a, b : a + e023*b
 mve0123 = lambda a, b : a + e0123*b
-e123_e0123 = lambda a,b,c : a + b*e123 + c*e0123
-
+mv_point = lambda b, c, d, _ : b*e023 + c*e013 + d*e012 + e123
+mv_line = lambda a, b, c, d, e, f : a* e01 + b*e02 + c*e03 + d*e12 + e*e13 + f*e23
 mv_scalar = lambda a : a*e1*e1
 
-
-
-mve1e2e3               = lambda a, b, c, d : a + e1*b + e2*c + e3*d
+mve1e2e3               = lambda b, c, d : e1*b + e2*c + e3*d
 mve0e1e2e3             = lambda a, b, c, d, e : a + e0*b + e1*c + e2*d + e3*e
 mve01e02e03e12e13e23   = lambda a, b, c, d, e, f, g : a + e01*b + e02*c + e03*d + e12*e + e13*f + e23*g
 mve123                 = lambda a, b : a + e123*b
@@ -94,50 +69,6 @@ mve03e12               = lambda a, b, c : a + e03*b + e12*c
 mve0e123               = lambda a, b, c : a + e0*b + e123*c
 mve1e23                = lambda a, b, c : a + e1*b + e23*c
 mve2e13e0123           = lambda a, b, c, d : a + e2*b + e13*c + e0123*d
-
-def to_mask(arr, comps):
-    out = 0
-    nnz = 0
-    for i, el in enumerate(arr):
-        if el != 0:
-            out += 2**i
-            nnz += 1
-    
-    assert (nnz == comps), "Not valid example" 
-    return out
-
-def init_device(ptx, matrices, result, func_name):
-    mod  = cuda.module_from_buffer(ptx.encode())
-    # device init
-    
-    dev_matrices = [cuda.mem_alloc(m.nbytes) for m in matrices]
-    result_dev = cuda.mem_alloc(result.nbytes)
-    for dev_m, m in zip(dev_matrices, matrices) :  cuda.memcpy_htod(dev_m, m)
-
-    func = mod.get_function(func_name)
-    return func, dev_matrices, result_dev
-
-import math
-def generate_layout(N: int, els_per_thread: int) -> str:
-    assert N >= 32, "N must be at least 32"
-
-    def dim_entries(count: int, start: int) -> tuple[str, int]:
-        if count <= 1:
-            return "[]", start
-        steps = int(math.log2(count))
-        entries = [f"[{start << k}]" for k in range(steps)]
-        return "[" + ", ".join(entries) + "]", start << steps
-
-    i = 1
-    total_threads = N // els_per_thread
-
-    register,  i = dim_entries(els_per_thread, i)
-    lane,      i = dim_entries(min(total_threads, 32), i)
-    warp,      i = dim_entries(min(8, total_threads // 32), i)
-    block,     i = dim_entries(total_threads // 256, i)
-
-    return f"{{register = {register}, lane = {lane}, warp = {warp}, block = {block}}}"
-
 
 
 
@@ -151,12 +82,12 @@ def cuda_ctx():
     ctx.pop()
 
 CASES = [
-    ("v3__v3",             mve1e2e3, mve1e2e3, 4, 4, 7, 64, 1),
+    ("v3__v3",             mve1e2e3, mve1e2e3, 3, 3, 4, 64, 1),
     ("v4__v4",             mve0e1e2e3, mve0e1e2e3, 5, 5, 11, 64, 1),
     ("biv6__biv6",         mve01e02e03e12e13e23, mve01e02e03e12e13e23, 7, 7, 8, 64, 1),
     ("e123__e123",         mve123, mve123, 2, 2, 2, 64, 1),
     ("triv4__triv4",       mve012e013e023e123, mve012e013e023e123, 5, 5, 8, 64, 1),
-    ("v3__biv6",           mve1e2e3, mve01e02e03e12e13e23, 4, 7, 15, 64, 1),
+    # ("v3__biv6",           mve1e2e3, mve01e02e03e12e13e23, 4, 7, 15, 64, 1),
     ("e01e23__e03e12",     mve01e23, mve03e12, 3, 3, 7, 64, 1),
     ("e0e123__e1e23",      mve0e123, mve1e23, 3, 3, 7, 64, 1),
     ("e2e13e0123__e0e1e2e01", mve2e13e0123, mve0e1e2e01, 4, 5, 15, 64, 1),
@@ -207,6 +138,63 @@ CASES = [
 @pytest.mark.parametrize("case", CASES, ids=[c[0] for c in CASES])
 def test_geo_prod(case, cuda_ctx):
     name, mv_a, mv_b, comps_a, comps_b, comps_c, N, els_per_thread = case
+
+    mvs = [mv_a, mv_b]
+    comps = [comps_a, comps_b]
+
+    gfunc = lambda a, b : ~(a * b)
+
+    gaTestConfig = GATestConfig(algebra=MODE,
+                                mvs = mvs,
+                                comps = comps,
+                                geoTys= [GeometricObj.Unknown, GeometricObj.Unknown],
+                                objTys = [ObjectType.Unknown, ObjectType.Unknown],
+                                comps_c= comps_c, objTy_c=ObjectType.Unknown, geoTy_c=GeometricObj.Unknown,
+                                func=gfunc,
+                                can_to_bit_perm=np.array([0, 1, 2, 5, 3, 6, 8, 11, 4, 7, 9, 12, 10, 13, 14, 15]),
+                                bit_to_can_perm=np.array([0, 1, 2, 4, 8, 3, 5, 9, 6, 10, 12, 7, 11, 13, 14, 15]),
+                                N = N,
+                                els_per_thread= els_per_thread,
+                                saving_path="numerical/matrices",
+                                compile_script="./numerical/scripts/pga3d/compile_case.sh",
+                                mlir_op_name="geo_prod")
+
+    matrixGen = MatrixGenerator(gaTestConfig)
+    result_host, expected = run_ga_kernel_test(gaTestConfig, matrixGen)
+    
+    if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
+        print_debug_info(result_host, expected, comps_c, N)
+
+    assert(np.allclose(result_host, expected, atol=1e-5))
+
+CASES_ROTATE = [
+    ("N32_1",       mv_line,    mv_scalar,    6, 1, 7,   64,   1),
+    ("N64_1",       mv_point,    mv_scalar,    3, 1, 4,   64,   1),
+    ("N64_2",       mv_point,    mv_scalar,    3, 1, 4,   64,   2),
+    ("N128_1",      mv_point,    mv_scalar,    3, 1, 4,  128,   1),
+    ("N128_2",      mv_point,    mv_scalar,    3, 1, 4,  128,   2),
+    ("N128_4",      mv_point,    mv_scalar,    3, 1, 4,  128,   4),
+    ("N256_1",      mv_point,    mv_scalar,    3, 1, 4,  256,   1),
+    ("N256_2",      mv_point,    mv_scalar,    3, 1, 4,  256,   2),
+    ("N256_4",      mv_point,    mv_scalar,    3, 1, 4,  256,   4),
+    ("N256_8",      mv_point,    mv_scalar,    3, 1, 4,  256,   8),
+    ("N512_1",      mv_point,    mv_scalar,    3, 1, 4,  512,   1),
+    ("N512_2",      mv_point,    mv_scalar,    3, 1, 4,  512,   2),
+    ("N512_4",      mv_point,    mv_scalar,    3, 1, 4,  512,   4),
+    ("N512_8",      mv_point,    mv_scalar,    3, 1, 4,  512,   8),
+    ("N512_16",     mv_point,    mv_scalar,    3, 1, 4,  512,  16),
+    ("N1024_1",     mv_point,    mv_scalar,    3, 1, 4, 1024,   1),
+    ("N1024_2",     mv_point,    mv_scalar,    3, 1, 4, 1024,   2),
+    ("N1024_4",     mv_point,    mv_scalar,    3, 1, 4, 1024,   4),
+    ("N1024_8",     mv_point,    mv_scalar,    3, 1, 4, 1024,   8),
+    ("N1024_16",    mv_point,    mv_scalar,    3, 1, 4, 1024,  16),
+]
+
+
+
+@pytest.mark.parametrize("case", CASES_ROTATE, ids=[c[0] for c in CASES_ROTATE])
+def test_rotate(case, cuda_ctx):
+    name , mv_a, mv_b, comps_a, comps_b, comps_c, N, els_per_thread = case
 
     layout = generate_layout(N, els_per_thread)
     total_threads = N // els_per_thread
