@@ -6,7 +6,7 @@ from generate_oracle import MatrixGenerator
 import subprocess
 import math
 from clifford import Cl
-from helpers import to_mask, init_device, generate_layout
+from helpers import to_mask, init_device, generate_layout, GATestConfig
 DEBUG = True
 
 
@@ -165,24 +165,23 @@ def canonical_to_bitmap(matrices, c_default_indices, in_default_indices, can_to_
     adapted_mask_c = can_to_bit_perm[c_default_indices].argsort()
     return permuted_matrices, adapted_mask_c
     
-def run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread, can_to_bit_perm, op_name, gfunc, matrixGen, bash_compile_path):
+def run_ga_kernel_test(config, matrixGen):
     
-    c_default_indices, in_matrices = matrixGen.generate_matrices()
-    num_mvs = len(mvs)
-    masks = get_masks(mvs, comps, comps_c, gfunc, can_to_bit_perm)
-    run_bash(N, els_per_thread, masks, bash_compile_path)
+    num_mvs = len(config.mvs)
+    masks = get_masks(config.mvs, config.comps, config.comps_c, config.func, config.can_to_bit_perm)
+    run_bash(config.N, config.els_per_thread, masks, config.compile_script)
     c_default_indices, in_default_indices = matrixGen.generate_matrices()
-    matrices = [np.load(f"{matrixGen.get_saving_path()}/matrix_{i}.npz")['arr_0'] for i in range(num_mvs)]
+    matrices = [np.load(f"{config.saving_path}/matrix_{i}.npz")['arr_0'] for i in range(num_mvs)]
     
     # change from canonical -> bitmap layout, see explanation in cliffOps.cpp
-    permuted_matrices, adapted_mask_c = canonical_to_bitmap(matrices, c_default_indices, in_default_indices, can_to_bit_perm)
+    permuted_matrices, adapted_mask_c = canonical_to_bitmap(matrices, c_default_indices, in_default_indices, config.can_to_bit_perm)
 
     with open("output.ptx", "r") as f:
         ptx = f.read()
-    result_host = np.zeros(N * comps_c, dtype=np.float32)
-    func, dev_matrices, result_dev = init_device(ptx, permuted_matrices, result_host, op_name)
+    result_host = np.zeros(config.N * config.comps_c, dtype=np.float32)
+    func, dev_matrices, result_dev = init_device(ptx, permuted_matrices, result_host, config.mlir_op_name)
 
-    total_threads = N // els_per_thread
+    total_threads = config.N // config.els_per_thread
     num_blocks = max(total_threads//(256), 1)
     num_threads = min(total_threads, 256)
 
@@ -192,9 +191,9 @@ def run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread, can_to_bit_perm, 
     
     cuda.memcpy_dtoh(result_host, result_dev)
     
-    expected = np.load(f"{matrixGen.get_saving_path()}/matrix_c.npz")['arr_0']
+    expected = np.load(f"{config.saving_path}/matrix_c.npz")['arr_0']
     # change from bitmap layout -> canonical 
-    result_host = result_host.reshape(comps_c, N)[adapted_mask_c, :]
+    result_host = result_host.reshape(config.comps_c, config.N)[adapted_mask_c, :]
     return result_host, expected
 
 def print_debug_info(result_host, expected, comps_c, N):
@@ -212,16 +211,24 @@ def test_geo_prod(case, cuda_ctx):
     name, mvs, comps, comps_c, N, els_per_thread = case
 
     gfunc = lambda a, b : ~(a * b)
-    matrixGen = MatrixGenerator(mvs,
-                                comps,
-                                [ObjectType.Unknown, ObjectType.Unknown],
-                                [GeometricObj.Unknown, GeometricObj.Unknown],
-                                comps_c, ObjectType.Unknown, GeometricObj.Unknown,
-                                MODE, N, gfunc)
 
-    result_host, expected = run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread,
-                                               np.array([0, 1, 2, 4, 3, 5, 6, 7]), "geo_prod", 
-                                               gfunc, matrixGen, "./numerical/scripts/pga2d/compile_case.sh")
+    gaTestConfig = GATestConfig(algebra=MODE,
+                                mvs = mvs,
+                                comps = comps,
+                                geoTys= [GeometricObj.Unknown, GeometricObj.Unknown],
+                                objTys = [ObjectType.Unknown, ObjectType.Unknown],
+                                comps_c= comps_c, objTy_c=ObjectType.Unknown, geoTy_c=GeometricObj.Unknown,
+                                func=gfunc,
+                                can_to_bit_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
+                                bit_to_can_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
+                                N = N,
+                                els_per_thread= els_per_thread,
+                                saving_path="numerical/matrices",
+                                compile_script="./numerical/scripts/pga2d/compile_case.sh",
+                                mlir_op_name="geo_prod")
+
+    matrixGen = MatrixGenerator(gaTestConfig)
+    result_host, expected = run_ga_kernel_test(gaTestConfig, matrixGen)
     
     if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
         print_debug_info(result_host, expected, comps_c, N)
@@ -257,17 +264,23 @@ def test_rotate(case, cuda_ctx):
     name , mvs, comps, comps_c, N, els_per_thread = case
     gfunc = lambda mv_a, mv_alpha : math.e**(mv_alpha * mv_a)
 
-    matrixGen = MatrixGenerator(mvs,
-                                comps,
-                                [ObjectType.Euclidean, ObjectType.Unknown],
-                                [GeometricObj.Point, GeometricObj.Scalar],
-                                comps_c, ObjectType.Unknown, GeometricObj.Motor,
-                                MODE, N, gfunc, f"numerical/matrices/{MODE}/rotation")
+    gaTestConfig = GATestConfig(algebra=MODE,
+                                mvs = mvs,
+                                comps = comps,
+                                geoTys= [GeometricObj.Point, GeometricObj.Scalar],
+                                objTys = [ObjectType.Euclidean, ObjectType.Unknown],
+                                comps_c= comps_c, objTy_c=ObjectType.Unknown, geoTy_c=GeometricObj.Motor,
+                                func=gfunc,
+                                can_to_bit_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
+                                bit_to_can_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
+                                N = N,
+                                els_per_thread= els_per_thread,
+                                saving_path=f"numerical/matrices/{MODE}/rotation",
+                                compile_script="./numerical/scripts/pga2d/compile_rotation.sh",
+                                mlir_op_name="rotation")
 
-    result_host, expected = run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread,
-                                                np.array([0, 1, 2, 4, 3, 5, 6, 7]), "rotation",
-                                                gfunc, matrixGen,
-                                                "./numerical/scripts/pga2d/compile_rotation.sh")
+    matrixGen = MatrixGenerator(gaTestConfig)
+    result_host, expected = run_ga_kernel_test(gaTestConfig, matrixGen)
 
     if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
         print_debug_info(result_host, expected, comps_c, N)
@@ -321,17 +334,23 @@ def test_rotate_appl(case, cuda_ctx):
         R = math.e**(mv_alpha*mv_x)
         return R*mv_y*~R
 
-    matrixGen = MatrixGenerator(mvs,
-                                comps,
-                                [ObjectType.Euclidean, ObjectType.Euclidean, ObjectType.Unknown],
-                                [GeometricObj.Point, GeometricObj.Point, GeometricObj.Scalar],
-                                comps_c, ObjectType.Unknown, GeometricObj.Point,
-                                MODE, N, gfunc, f"numerical/matrices/{MODE}/rotation_appl/{N}")
+    gaTestConfig = GATestConfig(algebra=MODE,
+                                mvs = mvs,
+                                comps = comps,
+                                geoTys= [GeometricObj.Point, GeometricObj.Point, GeometricObj.Scalar],
+                                objTys = [ObjectType.Euclidean, ObjectType.Euclidean, ObjectType.Unknown],
+                                comps_c= comps_c, objTy_c=ObjectType.Unknown, geoTy_c=GeometricObj.Point,
+                                func=gfunc,
+                                can_to_bit_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
+                                bit_to_can_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
+                                N = N,
+                                els_per_thread= els_per_thread,
+                                saving_path=f"numerical/matrices/{MODE}/rotation_appl/{N}",
+                                compile_script="./numerical/scripts/pga2d/compile_end_to_end.sh",
+                                mlir_op_name="rotation")
 
-    result_host, expected = run_ga_kernel_test(mvs, comps, comps_c, N, els_per_thread,
-                                                np.array([0, 1, 2, 4, 3, 5, 6, 7]), "rotation",
-                                                gfunc, matrixGen,
-                                                "./numerical/scripts/pga2d/compile_end_to_end.sh")
+    matrixGen = MatrixGenerator(gaTestConfig)
+    result_host, expected = run_ga_kernel_test(gaTestConfig, matrixGen)
 
     if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
         print_debug_info(result_host, expected, comps_c, N)

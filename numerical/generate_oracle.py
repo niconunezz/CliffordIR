@@ -1,62 +1,41 @@
 import numpy as np
-from helpers import ObjectType, GeometricObj
+from helpers import ObjectType, GeometricObj, GATestConfig
 
 class MatrixGenerator():
-    def __init__(self, mvs, comps, objTys, geoTys,
-                 comps_c, objTy_c, geoTy_c, algebra : str, N : int, func,
-                 saving_path = "numerical/matrices"):
-        self.__algebra = algebra
-        self.__num_els = N
-        self.__mvs = mvs
-        self.__comps = comps
-        self.__objTys = objTys
-        self.__geoTys = geoTys
+    def __init__(self, GATestConfig):
+        self.__conf_obj = GATestConfig
         self.__matrices = self.init_matrices()
-        self.__comps_c = comps_c
-        self.__objTy_c = objTy_c
-        self.__geoTy_c = geoTy_c
-        self.__func = func
-        self.__saving_path = saving_path 
         self.__matrix_c = self.init_matrix_c()
 
-    def get_mvs(self):
-        return self.__mvs
-    def get_comps(self):
-        return self.__comps
-
-    def get_comp_c(self):
-        return self.__comps_c
-    
-    def get_num_els(self):
-        return self.__num_els
-
-    def get_func(self):
-        return self.__func
-
-    def get_geoTys(self):
-        return self.__geoTys 
-
-    def get_saving_path(self):
-        return self.__saving_path
+    def get_conf_obj(self):
+        return self.__conf_obj
 
     def init_matrices(self):
+        config = self.__conf_obj
         matrices = []
-        for (mv, comp, objTy, geoTy) in zip(self.__mvs,
-                                            self.__comps,
-                                            self.__objTys,
-                                            self.__geoTys):
+        for (mv, comp, objTy, geoTy) in zip(config.mvs,
+                                            config.comps,
+                                            config.objTys,
+                                            config.geoTys):
 
             matrix = self.__initialize_random_matrix(comp)
             if objTy == ObjectType.Unknown:
                 matrix = self.__initialize_random_matrix(comp)
 
-            if (self.__algebra == "pga2d"):
-                if objTy == ObjectType.Euclidean:
+            if (config.algebra == "pga2d"):
+                print("ALGEBRA DETECTED")
+                print("-"*50)
+                print(f"objTy : {objTy}")
+                print(f"geoTy : {geoTy}")
+                if objTy is ObjectType.Euclidean:
+                    print("EUCLIDEAN DETECTED")
                     match geoTy:
                         case GeometricObj.Point:
+                            print("POINT DETECTED")
+                            print("-"*50)
                             matrix[-1, :] = 1
 
-            if (self.__algebra == "pga3d"):
+            if (config.algebra == "pga3d"):
                 if objTy == ObjectType.Euclidean:
                     match geoTy:
                         case GeometricObj.Line:
@@ -68,35 +47,37 @@ class MatrixGenerator():
         return matrices
 
     def init_matrix_c(self):
-        # if self.__objTy_c == ObjectType.Unknown:
-        return np.empty((self.__comps_c, self.__num_els), dtype=np.float32)
+        config = self.__conf_obj
+        return np.empty((config.comps_c, config.N), dtype=np.float32)
     
     def __initialize_random_matrix(self, comps):
-        return np.random.rand(comps, self.__num_els).astype(np.float32)
+        config = self.__conf_obj
+        return np.random.rand(comps, config.N).astype(np.float32)
 
     def __extract_comps(self):
         # get indices for a regular a*b (comps_c non zero components)
-        i = 0
+        config = self.__conf_obj
 
+        i = 0
         params = []
-        for (mv, matrix) in zip(self.__mvs, self.__matrices):
+        for (mv, matrix) in zip(config.mvs, self.__matrices):
             params.append(mv(*matrix[:, i]))
 
-        mv_out = self.__func(*params)
+        mv_out = config.func(*params)
         vals = mv_out.value
         c_default_indices = np.nonzero(vals)[0]
         coeffs = vals[c_default_indices]
-        assert (len(coeffs) == self.__comps_c), "c_default_indices are wrong"
+        assert (len(coeffs) == config.comps_c), "c_default_indices are wrong"
 
         return [np.nonzero(multivector.value)[0] for multivector in params], c_default_indices
 
     def generate_matrices(self):
-
+        config = self.__conf_obj
         input_indices, c_default_indices = self.__extract_comps()
-        for j in range(self.__num_els):
-            applied_mvs = [mv_func(*matrix[:, j])for (mv_func, matrix) in zip(self.__mvs, self.__matrices)]
+        for j in range(config.N):
+            applied_mvs = [mv_func(*matrix[:, j])for (mv_func, matrix) in zip(config.mvs, self.__matrices)]
 
-            mv_out= self.__func(*applied_mvs)
+            mv_out= config.func(*applied_mvs)
             self.__matrix_c[:, j] = mv_out.value[c_default_indices]
 
             if (j == 0):
@@ -105,7 +86,7 @@ class MatrixGenerator():
                 print(f"out : {mv_out}")
 
         for idx, matrix in enumerate(self.__matrices):
-            np.savez(f"{self.__saving_path}/matrix_{idx}", matrix)
+            np.savez(f"{config.saving_path}/matrix_{idx}", matrix)
 
-        np.savez(f"{self.__saving_path}/matrix_c", self.__matrix_c)
+        np.savez(f"{config.saving_path}/matrix_c", self.__matrix_c)
         return c_default_indices, input_indices

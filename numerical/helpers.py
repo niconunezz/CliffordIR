@@ -1,5 +1,7 @@
 import numpy as np
 import pycuda.driver as cuda
+from dataclasses import dataclass
+from typing import Callable
 import math
 from enum import Enum
 
@@ -15,6 +17,26 @@ class GeometricObj(Enum):
     Point = 3
     Motor = 4
     Unknown = 5
+
+@dataclass(frozen=True)
+class GATestConfig:
+    algebra : str
+    mvs: list[Callable]              
+    comps: list[int]             
+    objTys: list[ObjectType]
+    geoTys: list[GeometricObj]
+    comps_c: int                     
+    objTy_c : ObjectType
+    geoTy_c : GeometricObj
+    func: Callable                   
+    can_to_bit_perm: np.ndarray       
+    bit_to_can_perm: np.ndarray       
+    N: int
+    els_per_thread: int
+    saving_path : str
+    compile_script: str
+    mlir_op_name : str
+
 
 
 def to_mask(arr, comps):
