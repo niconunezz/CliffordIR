@@ -49,7 +49,6 @@ def to_mask(arr, comps):
             out += 2**i
             nnz += 1
     
-    assert (nnz == comps), "Not valid example" 
     return out
 
 
@@ -98,7 +97,6 @@ def get_masks(mvs, comps, comps_c, func, can_to_bit_perm):
 
 def run_bash(num_els, els_per_thread, masks, bash_file_path):
     layout = generate_layout(num_els, els_per_thread)
-    print(f"layout : {layout}")
     subprocess.run([bash_file_path, *masks, str(num_els), layout, "output.ptx"])
 
 # change from canonical -> bitmap layout, see explanation in cliffOps.cpp

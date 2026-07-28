@@ -1,5 +1,5 @@
 import numpy as np
-from helpers import ObjectType, GeometricObj, GATestConfig
+from helpers import ObjectType, GeometricObj
 
 class MatrixGenerator():
     def __init__(self, GATestConfig):
@@ -22,25 +22,17 @@ class MatrixGenerator():
             if objTy == ObjectType.Unknown:
                 matrix = self.__initialize_random_matrix(comp)
 
-            if (config.algebra == "pga2d"):
-                print("ALGEBRA DETECTED")
-                print("-"*50)
-                print(f"objTy : {objTy}")
-                print(f"geoTy : {geoTy}")
+            elif (config.algebra == "pga2d"):
                 if objTy is ObjectType.Euclidean:
-                    print("EUCLIDEAN DETECTED")
                     match geoTy:
                         case GeometricObj.Point:
-                            print("POINT DETECTED")
-                            print("-"*50)
                             matrix[-1, :] = 1
 
-            if (config.algebra == "pga3d"):
+            elif (config.algebra == "pga3d"):
                 if objTy == ObjectType.Euclidean:
                     match geoTy:
                         case GeometricObj.Line:
-                            ...
-                        
+                            matrix = self.__random_lines(mv, config.N)
 
             matrices.append(matrix)
 
@@ -54,6 +46,31 @@ class MatrixGenerator():
         config = self.__conf_obj
         return np.random.rand(comps, config.N).astype(np.float32)
 
+    def __random_lines(self, line_func, N: int) -> np.ndarray:
+        # Coeficientes libres
+        a = np.random.randn(N)
+        b = np.random.randn(N)
+        d = np.random.randn(N)
+        e = np.random.randn(N)
+        f = np.random.randn(N)
+
+        # Evitar divisiones por cero
+        while np.any(np.abs(d) < 1e-12):
+            mask = np.abs(d) < 1e-12
+            d[mask] = np.random.randn(mask.sum())
+
+        # Impone la condición de Plücker: af - be + cd = 0
+        c = (b * e - a * f) / d
+
+        comps = np.vstack([a, b, c, d, e, f])  # (6, N)
+
+        # Normalizar cada columna para que L² = -1
+        for i in range(N):
+            L = line_func(*comps[:, i])
+            comps[:, i] /= np.sqrt(abs((L * L).value[0]))
+        return comps.astype(np.float32)
+
+
     def __extract_comps(self):
         # get indices for a regular a*b (comps_c non zero components)
         config = self.__conf_obj
@@ -65,9 +82,9 @@ class MatrixGenerator():
 
         mv_out = config.func(*params)
         vals = mv_out.value
-        c_default_indices = np.nonzero(vals)[0]
-        coeffs = vals[c_default_indices]
-        assert (len(coeffs) == config.comps_c), "c_default_indices are wrong"
+        #todo: find a way decimals can be higher, at least ~10
+        c_default_indices = np.nonzero(np.round(vals, decimals=7))[0]
+        assert (len(c_default_indices) == config.comps_c), f"len(coeffs) = {len(c_default_indices)} doesnt match comps_c = {config.comps_c}"
 
         return [np.nonzero(multivector.value)[0] for multivector in params], c_default_indices
 

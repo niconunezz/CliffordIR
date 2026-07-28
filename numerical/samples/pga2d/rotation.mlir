@@ -7,6 +7,5 @@ cliff.func @rotation(%arg0 : tensor<NUM_ELSx!cliff.point<euclidean, true, #space
         tensor<NUM_ELSx!cliff.scalar<#space>> ->
         tensor<NUM_ELSx!cliff.motor<true, rotor, #space>>
 
-        
     cliff.ret %0 : tensor<NUM_ELSx!cliff.motor<true, rotor, #space>>
 }
