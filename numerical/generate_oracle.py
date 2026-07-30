@@ -1,5 +1,6 @@
 import numpy as np
 from helpers import ObjectType, GeometricObj
+import os
 
 class MatrixGenerator():
     def __init__(self, GATestConfig):
@@ -22,6 +23,7 @@ class MatrixGenerator():
             if objTy == ObjectType.Unknown:
                 matrix = self.__initialize_random_matrix(comp)
 
+            #todo: do this better
             elif (config.algebra == "pga2d"):
                 if objTy is ObjectType.Euclidean:
                     match geoTy:
@@ -33,6 +35,11 @@ class MatrixGenerator():
                     match geoTy:
                         case GeometricObj.Line:
                             matrix = self.__random_lines(mv, config.N)
+
+                if objTy is ObjectType.Euclidean:
+                    match geoTy:
+                        case GeometricObj.Point:
+                            matrix[-1, :] = 1
 
             matrices.append(matrix)
 
@@ -103,6 +110,8 @@ class MatrixGenerator():
                 print(f"out : {mv_out}")
 
         for idx, matrix in enumerate(self.__matrices):
+            if not os.path.isdir(config.saving_path): 
+                os.mkdir(config.saving_path)
             np.savez(f"{config.saving_path}/matrix_{idx}", matrix)
 
         np.savez(f"{config.saving_path}/matrix_c", self.__matrix_c)

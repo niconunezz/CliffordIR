@@ -54,7 +54,9 @@ mve0e1e2e01e02e12e012 = lambda a, b, c, d ,e , f, g, h : a + b*e0 + c*e1 + d*e2 
 mve123 = lambda a, b : a + e123*b
 mve023 = lambda a, b : a + e023*b
 mve0123 = lambda a, b : a + e0123*b
-mv_point = lambda b, c, d, _ : b*e023 + c*e013 + d*e012 + e123
+mv_rotor = lambda a, b, c, d, e, f, g : a + b* e01 + c*e02 + d*e03 + e*e12 + f*e13 + g*e23
+mv_point = lambda b, c, d, e : b*e012  + c*e013 + d*e023 + e*e123
+
 mv_line = lambda a, b, c, d, e, f : a* e01 + b*e02 + c*e03 + d*e12 + e*e13 + f*e23
 mv_e12 = lambda a : a*e12
 mv_scalar = lambda a : a*e1*e1
@@ -83,6 +85,8 @@ def cuda_ctx():
 
 CASES = [
     ("v3__v3",             mve1e2e3, mve1e2e3, 3, 3, 4, 64, 1),
+    ("point__point",             mv_point, mv_point, 4, 4, 4, 64, 1),
+    ("rotor__point",             mv_rotor, mv_point, 7, 4, 8, 64, 1),
     ("v4__v4",             mve0e1e2e3, mve0e1e2e3, 5, 5, 11, 64, 1),
     ("biv6__biv6",         mve01e02e03e12e13e23, mve01e02e03e12e13e23, 7, 7, 8, 64, 1),
     ("e123__e123",         mve123, mve123, 2, 2, 2, 64, 1),
@@ -187,6 +191,8 @@ CASES_ROTATE = [
 
 
 
+
+
 @pytest.mark.parametrize("case", CASES_ROTATE, ids=[c[0] for c in CASES_ROTATE])
 def test_rotate(case, cuda_ctx):
     name , mvs, comps, comps_c, N, els_per_thread = case
@@ -217,3 +223,75 @@ def test_rotate(case, cuda_ctx):
 
 
     assert(np.allclose(result_host, expected, atol=1e-5))
+
+
+CASES_ROTATE_APPL = [
+    ("N64_ELS1",          64,        1),
+    ("N64_ELS2",          64,        2),
+
+    ("N128_ELS1",        128,        1),
+    ("N128_ELS4",        128,        4),
+
+    ("N256_ELS2",        256,        2),
+    ("N256_ELS8",        256,        8),
+
+    ("N512_ELS4",        512,        4),
+    ("N512_ELS16",       512,       16),
+
+    ("N1024_ELS1",      1024,        1),
+    ("N1024_ELS32",     1024,       32),
+
+    ("N2048_ELS4",      2048,        4),
+    ("N2048_ELS32",     2048,       32),
+
+    ("N4096_ELS8",      4096,        8),
+    ("N4096_ELS32",     4096,       32),
+
+    ("N8192_ELS16",     8192,       16),
+    ("N8192_ELS32",     8192,       32),
+
+    ("N65536_ELS8",    65536,        8),
+    ("N65536_ELS32",   65536,       32),
+
+    ("N1048576_ELS16",1048576,      16),
+    ("N1048576_ELS32",1048576,      32),
+]
+
+
+@pytest.mark.parametrize("case", CASES_ROTATE_APPL, ids=[c[0] for c in CASES_ROTATE_APPL])
+def test_rotate_appl(case, cuda_ctx):
+    name, N, els_per_thread = case
+
+    mv_x = mv_line; mv_y = mv_point; mv_alpha = mv_scalar
+    comps_x = 6; comps_y = 4; comps_alpha = 1; comps_c = 4
+    comps = [comps_x, comps_y, comps_alpha]
+    mvs = [mv_x, mv_y, mv_alpha]
+
+    def gfunc(mv_x, mv_y, mv_alpha):
+        R = math.e**(mv_alpha*mv_x)
+        return R*mv_y*~R
+
+
+    gaTestConfig = GATestConfig(algebra=MODE,
+                                mvs = mvs,
+                                comps = comps,
+                                geoTys= [GeometricObj.Line, GeometricObj.Point, GeometricObj.Scalar],
+                                objTys = [ObjectType.Euclidean, ObjectType.Euclidean, ObjectType.Unknown],
+                                comps_c= comps_c, objTy_c=ObjectType.Unknown, geoTy_c=GeometricObj.Point,
+                                func=gfunc,
+                                can_to_bit_perm=np.array([0, 1, 2, 5, 3, 6, 8, 11, 4, 7, 9, 12, 10, 13, 14, 15]),
+                                bit_to_can_perm=np.array([0, 1, 2, 4, 8, 3, 5, 9, 6, 10, 12, 7, 11, 13, 14, 15]),
+                                N = N,
+                                els_per_thread= els_per_thread,
+                                saving_path=f"numerical/matrices/{MODE}/rotation_appl/{N}",
+                                compile_script="./numerical/scripts/pga3d/compile_end_to_end.sh",
+                                mlir_op_name="rotation")
+
+    matrixGen = MatrixGenerator(gaTestConfig)
+    result_host, expected = run_ga_kernel_test(gaTestConfig, matrixGen)
+
+    if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
+        print_debug_info(result_host, expected, comps_c, N)
+
+    assert(np.allclose(result_host, expected, atol=1e-4))
+
