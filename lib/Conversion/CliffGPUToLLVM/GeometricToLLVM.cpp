@@ -19,6 +19,9 @@ using namespace mlir::clg;
 
 namespace {
 
+//!TODO: think if warp-reduction is possible
+//something like: out[3] = a[3]*b[2] + a[5]*b[2] -> reduce with a warp?
+    
 class CliffGeoProdOpPattern : public OpConversionPattern<GeoProd> {
 public:
     using OpConversionPattern::OpConversionPattern;
@@ -75,31 +78,6 @@ public:
         
         auto adaptorLHS = adaptor.getLhs();
         auto adaptorRHS = adaptor.getRhs();
-
-        // scalar case, e.g. ((e01 + 4) * (scalar))
-        if (lhsMask == 1 || rhsMask == 1) {
-            for (uint32_t regId = 0; regId < registerDims; ++regId) {
-                auto lhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorLHS, regId);
-                auto rhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorRHS, regId);
-                
-                auto cstMultivector = (lhsMask == 1) ? lhsMultivector : rhsMultivector;
-                auto dynMultivector = (lhsMask == 1) ? rhsMultivector : lhsMultivector;
-                auto dynMask = (lhsMask == 1) ? rhsMaskCopy : lhsMaskCopy;
-                auto cstScalar = LLVM::ExtractValueOp::create(rewriter, loc, cstMultivector, 0);
-                
-                int idx = 0;
-                while (dynMask) {
-                    
-                    auto dynBasis = LLVM::ExtractValueOp::create(rewriter, loc, dynMultivector, idx);
-                    Value ret = b.fmul(cstScalar, dynBasis);
-                    result = LLVM::InsertValueOp::create(rewriter, loc, result, ret, {regId, idx});
-                    dynMask &= dynMask - 1;
-                    idx++;
-                }
-            }        
-            rewriter.replaceOp(op, result);
-            return success();
-        }
         
         for (uint32_t regId = 0; regId < registerDims; ++regId) {
             auto lhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorLHS, regId);
