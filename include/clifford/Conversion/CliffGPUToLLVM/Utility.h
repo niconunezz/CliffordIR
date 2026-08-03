@@ -35,6 +35,9 @@ namespace mlir::clg {
         template <typename... Args> LLVM::FAddOp fadd(Args &&...args) {
             return LLVM::FAddOp::create(*builder, loc, std::forward<Args>(args)...);
         }
+        template <typename... Args> LLVM::FSubOp fsub(Args &&...args) {
+            return LLVM::FSubOp::create(*builder, loc, std::forward<Args>(args)...);
+        }
         template <typename... Args> LLVM::MulOp mul(Args &&...args) {
             return LLVM::MulOp::create(*builder, loc, std::forward<Args>(args)...);
         }
