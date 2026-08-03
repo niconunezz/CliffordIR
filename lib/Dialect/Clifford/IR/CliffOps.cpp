@@ -22,35 +22,36 @@ LogicalResult GeoProd::verify() {
     // e.g. a sandwich product over an object b always returns this same b object
     // this depends completely on the fact that the geo prod on the left and on the
     // right are done on the same multivector (reversed on the right). This method
-    // cannot infer that, creating the upper bound and so, wasting memory
+    // cannot infer that, creating the upper bound and therefore, wasting memory
     if (maybeLhsConcrete || maybeRhsConcrete)
         return success();
 
-    auto lhsTy = dyn_cast<Cliff_AlgebraicElementInterface>(lhsTensor.getElementType());
-    auto rhsTy = dyn_cast<Cliff_AlgebraicElementInterface>(rhsTensor.getElementType());
-    auto outTy = dyn_cast<Cliff_AlgebraicElementInterface>(outTensor.getElementType());
+
+    auto lhsTy = dyn_cast<Cliff_MultivectorType>(lhsTensor.getElementType());
+    auto rhsTy = dyn_cast<Cliff_MultivectorType>(rhsTensor.getElementType());
+    auto outTy = dyn_cast<Cliff_MultivectorType>(outTensor.getElementType());
 
     if (!lhsTy || !rhsTy || !outTy)
         return emitError("tensor elements must be multivector types");
 
-    if (lhsTy.getAlgebra() != rhsTy.getAlgebra() || 
-        lhsTy.getAlgebra() != outTy.getAlgebra())
+    // same reason here, if we know the value of the output, we trust it to be right
+    if (outTy.getKind().getValue() != GeometricKind::Unknown)
+        return success();
+    
+
+    if (lhsTy.getSpace() != rhsTy.getSpace() || 
+        lhsTy.getSpace() != outTy.getSpace())
         return emitError("all operands must belong to the same algebra");
 
-    auto algebra = dyn_cast<CliffordAlgebraAttr>(lhsTy.getAlgebra());
+    auto algebra = dyn_cast<CliffordAlgebraAttr>(lhsTy.getSpace());
     if (!algebra)
         return emitError("algebra attribute must be a CliffordAlgebraAttr");
 
     unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
 
-    const uint64_t lhsMask = lhsTy.getActiveMask();
-    const uint64_t rhsMask = rhsTy.getActiveMask();
-    
-    llvm::errs() << "lhsMask : " << lhsMask << "\n";
-    llvm::errs() << "rhsMask : " << rhsMask << "\n";
-
-    const uint64_t outMask = outTy.getActiveMask();
-    llvm::errs() << "outMask : " << outMask << "\n";
+    const uint64_t lhsMask = lhsTy.getMask();
+    const uint64_t rhsMask = rhsTy.getMask();
+    const uint64_t outMask = outTy.getMask();
     
     uint64_t lhsMaskCopy = lhsMask;
     uint64_t rhsMaskCopy = rhsMask;
