@@ -109,9 +109,8 @@ class MatrixGenerator():
                     print(f"mv{print_idx} : {mv}") 
                 print(f"out : {mv_out}")
 
+        os.makedirs(config.saving_path, exist_ok=True)
         for idx, matrix in enumerate(self.__matrices):
-            if not os.path.isdir(config.saving_path): 
-                os.mkdir(config.saving_path)
             np.savez(f"{config.saving_path}/matrix_{idx}", matrix)
 
         np.savez(f"{config.saving_path}/matrix_c", self.__matrix_c)
