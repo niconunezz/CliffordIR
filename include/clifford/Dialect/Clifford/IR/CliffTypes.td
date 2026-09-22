@@ -117,7 +117,7 @@ def Cliff_Multivector : Cliff_ObjType<"Cliff_Multivector",
                       AttrParameter<"::mlir::cliff::GeometricKindAttr", ""> : $kind,
                       "CliffordAlgebraAttr" : $space);
 
-    let assemblyFormat = "`<` $mask `,` $kind `,` $dtype `,` $space `>`";
+    let assemblyFormat = "`<` $mask `,` $kind  `,` $dtype `,` $space `>`";
 
     let extraClassDeclaration = [{
         uint32_t getDegree() const;

@@ -66,7 +66,21 @@ def Cliff_FuncOp : Cliff_Op<"func", [FunctionOpInterface,
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods
     //===------------------------------------------------------------------===//
+    ::mlir::SymbolTable::Visibility getVisibility() {
+    return mlir::SymbolTable::getSymbolVisibility(*this);
+    }
 
+    void setVisibility(::mlir::SymbolTable::Visibility vis) {
+        if (vis == ::mlir::SymbolTable::Visibility::Public) {
+            setSymVisibilityAttr(nullptr);
+            return;
+        }
+        setSymVisibilityAttr(::mlir::StringAttr::get(
+            getContext(),
+            vis == ::mlir::SymbolTable::Visibility::Private ? "private" : "nested"));
+        }
+    ::llvm::StringRef getName() { return getSymName(); }
+    ::mlir::StringAttr getNameAttr() { return getSymNameAttr(); }
     bool isDeclaration() { return isExternal(); }
   }];
   let hasCustomAssemblyFormat = 1;
