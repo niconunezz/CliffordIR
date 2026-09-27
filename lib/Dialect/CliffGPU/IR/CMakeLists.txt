@@ -3,7 +3,8 @@ add_clifford_library(CliffGPUIR
     Dialect.cpp
 
     DEPENDS
-    CliffGPUIRTableGen
+    CliffordIRTableGen 
+    CliffGPUIRTableGen 
 
     LINK_LIBS PUBLIC
     MLIRIR
