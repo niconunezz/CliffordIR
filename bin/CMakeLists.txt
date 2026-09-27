@@ -1,25 +1,16 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-get_property(cliford_libs GLOBAL PROPERTY CLIFORD_LIBS)
+get_property(clifford_libs GLOBAL PROPERTY CLIFFORD_LIBS)
 
 add_llvm_executable(cliff-opt cliff-opt.cpp)
+
 target_link_libraries(cliff-opt PRIVATE
-    ${cliford_libs}
-    CliffordIR
-    CliffGPUIR
-    CliffTools
-    CliffToCliffGPUPass
-    CliffGPUToLLVMPass
-    CliffordPasses
-    ${dialect_libs}
-    ${conversion_libs}
+    ${clifford_libs}
+
+    # MLIR core
     MLIROptLib
     MLIRPass
     MLIRRegisterAllDialects
     MLIRRegisterAllPasses
     MLIRTransforms
-    
-
 )
 
 mlir_check_all_link_libraries(cliff-opt)
