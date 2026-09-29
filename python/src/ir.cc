@@ -70,7 +70,7 @@ void init_clifford_ir(py::module_ &m) {
 
     py::class_<ModuleOp, OpState>(m, "module")
     .def("dump", &ModuleOp::dump)
-    .def("push_back", [](ModuleOp &self, func::FuncOp &funcOp) {
+    .def("push_back", [](ModuleOp &self, FuncOp &funcOp) {
         self.push_back(funcOp);
     })
     .def("get_body", [](ModuleOp &self) { return self.getBody(); }, ret::reference);
