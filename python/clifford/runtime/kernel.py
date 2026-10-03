@@ -70,13 +70,4 @@ def kernel(fn):
     return KernelFunction(fn)
 
 
-@kernel
-def rotate(x, angle):
-    motor = ga.rotate(x, angle)
-    return motor
 
-
-
-
-if __name__ == "__main__":
-    rotate()
