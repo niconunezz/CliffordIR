@@ -1,6 +1,8 @@
 import ast
 import inspect
 from .._C.libclifford import ir
+from .. import ga
+from ..ga import str_to_ty
 
 
 class CodeGenerator(ast.NodeVisitor):
@@ -17,7 +19,7 @@ class CodeGenerator(ast.NodeVisitor):
         if self.fn:
             raise NotImplementedError("compiled functions cannot be nested! create two separate functions")
         sym_name = node.name
-        fn_ty = self.prototype.build_fn_ty(self.builder)
+        fn_ty = self.prototype.build_fn_ty(str_to_ty, self.builder)
         visibility = "public"
         self.fn = self.builder.get_function_def(sym_name, fn_ty, visibility)
         self.module.push_back(self.fn)
@@ -38,7 +40,6 @@ class CodeGenerator(ast.NodeVisitor):
 
     def visit_Return(self, node):
         self.builder.create_return([])
-        print("returning...")
         
 
 class FunctionType:
@@ -47,19 +48,28 @@ class FunctionType:
         self.inputs = inputs
         self.results = results
 
-    def build_fn_ty(self, builder):
-        return builder.get_function_type(self.inputs, self.results)
+    def to_ir_list(self, builder, str_to_ty_func, types):
+        return [ty.to_ir(builder, str_to_ty_func) for ty in types]
 
-def ast_to_cliff(fn, context, filename, line, col):
-    builder = ir.CliffordOpBuilder(context)
+    def build_fn_ty(self, str_to_ty_func, builder):
+        input_ir_list = self.to_ir_list(builder, str_to_ty_func, self.inputs)
+        result_ir_list = self.to_ir_list(builder, str_to_ty_func, self.results)
+        return builder.get_function_type(input_ir_list, result_ir_list)
+
+
+
+
+
+def ast_to_cliff(fn, context, builder, prototype, filename, line, col):
+    
     builder.set_location(filename, line, col)
-    args = [builder.get_f32ty(), builder.get_f32ty(), builder.get_f32ty()]  
-    fn_ty = FunctionType(args, [])                       
+
+    fn_ty = FunctionType(prototype.values(), [])                    
     cg = CodeGenerator(context, fn_ty, builder)
     tree = fn.parse()
     cg.visit(tree)
-    func = cg.fn
-    func.debug()
+    func = cg.module
+    func.dump()
     
 
 
