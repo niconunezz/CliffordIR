@@ -35,7 +35,6 @@ class KernelCallable:
         src = src[re.search(r"^def\s+\w+\s*\(", src, re.MULTILINE).start():]
         self._src = src
 
-
         self.def_line = get_def_line(self.raw_src, self.starting_line_number)
         self.def_col = get_def_col(raw_src_str)
         self.file_name = fn.__code__.co_filename
@@ -44,23 +43,27 @@ class KernelCallable:
         return ast.parse(self._src)
 
 
-
 class KernelFunction(KernelCallable):
 
     def __init__(self, fn):
         super().__init__(fn)
         self.ASTSource = ASTSource
-        self.args = self.signature.parameters
+        self.static_params = self.signature.parameters
+
 
     def get_arg_names(self):
-        return self.args.keys()
+        return self.static_params.keys()
 
-    def __call__(self):
+    def get_signature(self, args):
+        arg_names = self.get_arg_names()
+        return {name: ty for (name, ty) in zip(arg_names, args)}
+
+    def __call__(self, *args):
         context = ir.context()
+        builder = ir.CliffordOpBuilder(context)
         ir.register_dialects(context)
-
-        ast_to_cliff(self, context, self.file_name, self.def_line, self.def_col)
-
+        signature = self.get_signature(args)
+        ast_to_cliff(self, context, builder, signature, self.file_name, self.def_line, self.def_col)
 
 
 def kernel(fn):
