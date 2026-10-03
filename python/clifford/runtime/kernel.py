@@ -8,7 +8,7 @@ from .._C.libclifford import ir
 
 
 def get_def_line(raw_src, starting_line_number):
-    def_patt = r'def\s+[a-zA-Z][a-zA-Z0-9]*\((?:(?:[a-zA-Z][a-zA-Z0-9]*)(?:\s*,\s*[a-zA-Z][a-zA-Z0-9]*)*)?\):'
+    def_patt = r'def\s+\w+\('
     for idx, line in enumerate(raw_src):
         if re.match(def_patt, line):
             return starting_line_number + idx
