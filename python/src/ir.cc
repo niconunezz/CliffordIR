@@ -62,6 +62,7 @@ private:
 void init_clifford_ir(py::module_ &m) {
     using ret = py::rv_policy;
 
+    // MLIR
     py::class_<MLIRContext>(m, "context")
     .def(py::new_([]() {return new MLIRContext(MLIRContext::Threading::DISABLED);}));
 
@@ -106,9 +107,14 @@ void init_clifford_ir(py::module_ &m) {
             b.dump();
         }
     });
-        
-    py::class_<mlir::FloatType>(m, "FloatType");
+    py::class_<Value>(m, "Value");
 
+    py::class_<Operation>(m, "Operation")
+    .def("get_name", &Operation::getName);
+
+    
+    
+    // TYPES
     py::class_<mlir::Type>(m, "Type")
     .def("__repr__", [](mlir::Type &self) {
         std::string str;
@@ -117,11 +123,21 @@ void init_clifford_ir(py::module_ &m) {
         return str;
     });
     
-    py::class_<Value>(m, "Value");
+    py::class_<mlir::FloatType>(m, "FloatType");
+    
+    py::class_<Cliff_MultivectorType>(m, "MultivectorType");
+    py::class_<RankedTensorType>(m, "RankedTensorType");
+    
+    
+    // Attributes
+    py::class_<Attribute>(m, "Attribute")
+    .def("dump", &Attribute::dump);
+    
+    py::class_<GeometricKindAttr>(m, "GeometricKindAttr");
+    py::class_<CliffordAlgebraAttr>(m, "CliffordAlgebraAttr");
 
-    py::class_<Operation>(m, "Operation")
-    .def("get_name", &Operation::getName);
-
+    // OpBuilder
+    
     py::class_<CliffordOpBuilder>(m, "CliffordOpBuilder")
     .def(py::init<MLIRContext *>())
     .def("set_insertion_point_to_start", [](CliffordOpBuilder &self, Block &block) {
@@ -142,9 +158,28 @@ void init_clifford_ir(py::module_ &m) {
     .def("create_return", [](CliffordOpBuilder &self, std::vector<Value> outTys) -> OpState {
         return self.create<ReturnOp>(mlir::ValueRange(outTys));
     })
+    .def("get_geo_kind", [](CliffordOpBuilder &self) {
+        MLIRContext* ctx = self.getBuilder().getContext();
+        return GeometricKindAttr::get(ctx, GeometricKind::Unknown);
+    })
+    .def("get_algebra", [](CliffordOpBuilder &self, int p, int q, int r) {
+        MLIRContext* ctx = self.getBuilder().getContext();
+        return CliffordAlgebraAttr::get(ctx, p, q, r);
+    })
     .def("set_location",  [](CliffordOpBuilder &self, std::string fileName, int line, int column) -> void {
         return self.setLastLoc(fileName, line, column);
     })
+    .def("get_ranked_tensor_ty", [](CliffordOpBuilder &self, std::vector<int64_t> shape, Type dtype) -> Type {
+        return RankedTensorType::get(shape, dtype, self.getLastLoc());
+    })
+    .def("get_multivector_ty", [](CliffordOpBuilder &self,  uint64_t mask, Type dtype, CliffordAlgebraAttr space) -> Type {
+        MLIRContext* ctx = self.getBuilder().getContext();
+        return Cliff_MultivectorType::get(ctx, mask, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
+    })
+    // .def("get_point_ty", [](CliffordOpBuilder &self, GeometricKindAttr kind, bool normalized, CliffordAlgebraAttr space){
+    //     MLIRContext* ctx = self.getBuilder().getContext();
+    //     return Cliff_PointType::get(ctx, kind, normalized, space);
+    // })
     .def("get_function_def", [](CliffordOpBuilder &self, std::string &name, Type &fnTy, std::string &visibility) -> FuncOp {
         if (auto funcTy = dyn_cast<FunctionType>(fnTy)) {
             StringAttr fnNameAttr = self.getBuilder().getStringAttr(name);
@@ -159,6 +194,9 @@ void init_clifford_ir(py::module_ &m) {
     },
     py::arg("fn_name"), py::arg("fn_type"), py::arg("visibility"));
 
+
+
+    // DIALECT
     m.def("register_dialects", [](MLIRContext *ctx) {
         mlir::DialectRegistry registry;
 
