@@ -19,16 +19,33 @@ class CodeGenerator(ast.NodeVisitor):
         if module is None:
             self.module = builder.create_module()
 
+
+    def init_locals(self, entry_block):
+        arguments = entry_block.get_arguments()
+        for (k, arg) in zip(self.signature.keys(), arguments):
+            self.set_local_value(k, arg)
+
+    def set_local_value(self, target, value):
+        self.locals[target] = value
+
+    def lookup_name(self, name):
+        for lookup in [self.locals, self.globals]:
+            v = lookup.get(name, None)
+            if v is not None:
+                return v
+    
     def visit_FunctionDef(self, node):
         if self.fn:
             raise NotImplementedError("compiled functions cannot be nested! create two separate functions")
         sym_name = node.name
-        fn_ty = self.prototype.build_fn_ty(str_to_ty, self.builder)
+        
+        fn_ty = self.fn_ty.build_fn_ty(str_to_ty, self.builder)
         visibility = "public"
         self.fn = self.builder.get_function_def(sym_name, fn_ty, visibility)
         self.module.push_back(self.fn)
         entry = self.fn.add_entry_block()
         self.builder.set_insertion_point_to_start(entry)
+        self.init_locals(entry)
         self.generic_visit(node)
 
     def visit_arg(self, node):
