@@ -67,7 +67,8 @@ void init_clifford_ir(py::module_ &m) {
     .def(py::new_([]() {return new MLIRContext(MLIRContext::Threading::DISABLED);}));
 
     py::class_<OpState>(m, "OpState")
-    .def("dump", [](OpState &self) { self->dump(); });
+    .def("dump", [](OpState &self) { self->dump(); })
+    .def("get_result", [](OpState &self) -> Value { return self->getResult(0); });
 
     py::class_<ModuleOp, OpState>(m, "module")
     .def("dump", &ModuleOp::dump)
@@ -80,7 +81,11 @@ void init_clifford_ir(py::module_ &m) {
 
     py::class_<Block>(m, "Block")
     .def("get_parent", &Block::getParent, ret::reference)
-    .def("dump", &Block::dump);
+    .def("dump", &Block::dump)
+    .def("get_arguments", [](Block &self) {
+        auto args = self.getArguments();
+        return std::vector<BlockArgument>(args.begin(), args.end());
+    }) ;
     
     py::class_<Region>(m, "Region")
     .def("get_context", &Region::getContext, ret::reference)
@@ -108,11 +113,12 @@ void init_clifford_ir(py::module_ &m) {
         }
     });
     py::class_<Value>(m, "Value");
+    py::class_<BlockArgument, Value>(m, "BlockArgument")
+    .def("arg_number", &mlir::BlockArgument::getArgNumber);;
 
     py::class_<Operation>(m, "Operation")
-    .def("get_name", &Operation::getName);
-
-    
+    .def("get_name", &Operation::getName)
+    .def("get_results", &Operation::getResults);
     
     // TYPES
     py::class_<mlir::Type>(m, "Type")
