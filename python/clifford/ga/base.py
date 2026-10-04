@@ -64,13 +64,14 @@ class multivector:
         self.mask = int(mask)
         self.algebra = algebra
         self.shape = tuple([shape for shape in data.size()])
+        self.ir_value = None
 
     def to_ir(self, builder, str_to_ty_func):
         ir_scalar_dtype = str_to_ty_func(self.dtype).to_ir(builder)
         ir_algebra = self.algebra.to_ir(builder)
         mv_ty = builder.get_multivector_ty(self.mask, ir_scalar_dtype, ir_algebra)
-        return builder.get_ranked_tensor_ty(self.shape[1:], mv_ty)
-
+        self.ir_value = builder.get_ranked_tensor_ty(self.shape[1:], mv_ty)
+        return self.ir_value
 
     def __repr__(self):
         return f"tensor<{self.shape}xmultivector<{self.mask}, {self.dtype}>>"
