@@ -185,7 +185,7 @@ void init_clifford_ir(py::module_ &m) {
         return self.setLastLoc(fileName, line, column);
     })
     .def("get_ranked_tensor_ty", [](CliffordOpBuilder &self, std::vector<int64_t> shape, Type dtype) -> Type {
-        return RankedTensorType::get(shape, dtype, self.getLastLoc());
+        return RankedTensorType::get(shape, dtype);
     })
     .def("get_multivector_ty", [](CliffordOpBuilder &self,  uint64_t mask, Type dtype, CliffordAlgebraAttr space) -> Type {
         MLIRContext* ctx = self.getBuilder().getContext();
