@@ -81,7 +81,7 @@ public:
         }
 
         auto referenceLocus = cast<Cliff_MultivectorType>(geoObject.asMultivector());
-        // todo : strictly more conditions must be met (B is simple, B^2 is scalar)
+        // todo : more strictly conditions must be met (B is simple, B^2 is scalar)
         if (referenceLocus.getDegree() == 2) {
 
             if (geoObject.getObjectKind().getValue() == ObjectKind::Euclidean) {
