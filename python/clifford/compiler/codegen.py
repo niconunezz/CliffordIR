@@ -2,16 +2,20 @@ import ast
 import inspect
 from .._C.libclifford import ir
 from .. import ga
-from ..ga import str_to_ty
+from ..ga import str_to_ty, CliffordFrontend
 
 
 class CodeGenerator(ast.NodeVisitor):
-    def __init__(self, ctx, prototype, builder, module = None):
+    def __init__(self, ctx, fn_ty, signature, builder, globals, module = None):
         self.ctx = ctx
         self.fn = None
         self.module = module
+        self.signature = signature
         self.builder = builder
-        self.prototype = prototype
+        self.fn_ty = fn_ty
+        self.frontend = CliffordFrontend(builder)
+        self.globals = globals
+        self.locals = {}
         if module is None:
             self.module = builder.create_module()
 
@@ -28,18 +32,37 @@ class CodeGenerator(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_arg(self, node):
-        self.generic_visit(node)
+        if hasattr(node, "ctx"):
+            return node.id
+
+    def visit_Name(self, node):
+        return self.lookup_name(node.id)
 
     def visit_Assign(self, node):
-        ...
-        self.generic_visit(node)
+        targets = node.targets
+        assert(len(targets) == 1)
+        target = targets[0]
+        target_name = target.id
+        value = self.visit(node.value)
+        self.set_local_value(target_name, value.get_result())
 
     def visit_Call(self, node):
-        print(f"Calling {node.func.value.id}.{node.func.attr}")
-        self.generic_visit(node)
+        fn = self.visit(node.func)
+        args = [self.visit_arg(arg) for arg in node.args]
+        return self.call_Function(node, fn, args)
+
+    def visit_Attribute(self, node):
+        lhs = self.visit(node.value)
+        attr = getattr(node, "attr", None)
+        return getattr(lhs, attr)
+
+    def call_Function(self, node, fn, args):
+        values = [self.locals[arg] for arg in args]
+        return fn(*values, self.frontend)
 
     def visit_Return(self, node):
-        self.builder.create_return([])
+        ret_val = self.visit(node.value)
+        self.builder.create_return([ret_val])
         
 
 class FunctionType:
@@ -58,14 +81,11 @@ class FunctionType:
 
 
 
-
-
-def ast_to_cliff(fn, context, builder, prototype, filename, line, col):
+def ast_to_cliff(fn, context, builder, signature, globals, filename, line, col):
     
     builder.set_location(filename, line, col)
-
-    fn_ty = FunctionType(prototype.values(), [])                    
-    cg = CodeGenerator(context, fn_ty, builder)
+    fn_ty = FunctionType(signature.values(), [list(signature.values())[-1]])                    
+    cg = CodeGenerator(context, fn_ty, signature, builder,  globals)
     tree = fn.parse()
     cg.visit(tree)
     func = cg.module

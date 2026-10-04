@@ -1,9 +1,11 @@
-from .base import fp32, CliffordAlgebra, multivector
+from .base import fp32, CliffordAlgebra, multivector, rotate
+from .frontend import CliffordFrontend
 
 __all__ = [
     "fp32",
     "CliffordAlgebra",
-    "multivector"
+    "multivector",
+    "rotate"
 ]
 
 

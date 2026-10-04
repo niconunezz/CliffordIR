@@ -74,3 +74,8 @@ class multivector:
 
     def __repr__(self):
         return f"tensor<{self.shape}xmultivector<{self.mask}, {self.dtype}>>"
+
+# clifford ops
+
+def rotate(x, angle, frontend):
+    return frontend.rotate(x, angle)

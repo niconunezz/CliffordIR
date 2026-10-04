@@ -47,9 +47,9 @@ class KernelFunction(KernelCallable):
 
     def __init__(self, fn):
         super().__init__(fn)
+        self.__globals__ = fn.__globals__
         self.ASTSource = ASTSource
         self.static_params = self.signature.parameters
-
 
     def get_arg_names(self):
         return self.static_params.keys()
@@ -63,7 +63,7 @@ class KernelFunction(KernelCallable):
         builder = ir.CliffordOpBuilder(context)
         ir.register_dialects(context)
         signature = self.get_signature(args)
-        ast_to_cliff(self, context, builder, signature, self.file_name, self.def_line, self.def_col)
+        ast_to_cliff(self, context, builder, signature, self.__globals__, self.file_name, self.def_line, self.def_col)
 
 
 def kernel(fn):
