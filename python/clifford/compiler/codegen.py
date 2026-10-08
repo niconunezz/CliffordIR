@@ -1,23 +1,26 @@
 import ast
-import inspect
-from .._C.libclifford import ir
-from .. import ga
+from .._C.libclifford import ir, passes
 from ..ga import str_to_ty, CliffordFrontend
 
 
 class CodeGenerator(ast.NodeVisitor):
-    def __init__(self, ctx, fn_ty, signature, builder, globals, module = None):
+    def __init__(self, ctx, fn_ty, signature, globals, file_name, def_line, def_col, module = None):
         self.ctx = ctx
         self.fn = None
-        self.module = module
         self.signature = signature
-        self.builder = builder
+        self.builder = ir.CliffordOpBuilder(ctx)
+        self.builder.set_location(file_name, def_line, def_col)
+        # todo: this should be something like
+        # self.register_dialects() which calls some get_dialects_for("cliffDialect")
+        ir.register_dialects(ctx)
         self.fn_ty = fn_ty
-        self.frontend = CliffordFrontend(builder)
+        self.frontend = CliffordFrontend(self.builder)
         self.globals = globals
         self.locals = {}
+
+        self.module = module
         if module is None:
-            self.module = builder.create_module()
+            self.module = self.builder.create_module()
 
 
     def init_locals(self, entry_block):
@@ -98,17 +101,9 @@ class FunctionType:
 
 
 
-def ast_to_cliff(fn, context, builder, signature, globals, filename, line, col):
+def ast_to_cliff(fn, struct, context):
     
-    builder.set_location(filename, line, col)
-    fn_ty = FunctionType(signature.values(), [list(signature.values())[-1]])                    
-    cg = CodeGenerator(context, fn_ty, signature, builder,  globals)
-    tree = fn.parse()
-    cg.visit(tree)
-    func = cg.module
-    func.dump()
-    
-
-
-
-
+    fn_ty = FunctionType(struct.signature.values(), [list(struct.signature.values())[-1]])                    
+    cg = CodeGenerator(context, fn_ty, struct.signature, fn.__globals__, fn.file_name, fn.def_line, fn.def_col)
+    cg.visit(fn.parse())
+    return cg.module

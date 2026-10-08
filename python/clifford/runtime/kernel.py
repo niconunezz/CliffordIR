@@ -2,9 +2,7 @@ import inspect
 import ast
 import textwrap
 import re
-from ..compiler.codegen import ast_to_cliff
-from ..compiler.compiler import ASTSource
-from .._C.libclifford import ir
+from ..compiler.compiler import compile, ASTStruct
 
 
 def get_def_line(raw_src, starting_line_number):
@@ -48,9 +46,8 @@ class KernelFunction(KernelCallable):
     def __init__(self, fn):
         super().__init__(fn)
         self.__globals__ = fn.__globals__
-        self.ASTSource = ASTSource
         self.static_params = self.signature.parameters
-
+        self.ASTStruct = ASTStruct
     def get_arg_names(self):
         return self.static_params.keys()
 
@@ -58,12 +55,14 @@ class KernelFunction(KernelCallable):
         arg_names = self.get_arg_names()
         return {name: ty for (name, ty) in zip(arg_names, args)}
 
-    def __call__(self, *args):
-        context = ir.context()
-        builder = ir.CliffordOpBuilder(context)
-        ir.register_dialects(context)
+    def _compile(self, signature):
+        struct = self.ASTStruct(self, signature)
+        compile(self, struct)
+
+    def __call__(self, *args):        
         signature = self.get_signature(args)
-        ast_to_cliff(self, context, builder, signature, self.__globals__, self.file_name, self.def_line, self.def_col)
+        
+        self._compile(signature)
 
 
 def kernel(fn):

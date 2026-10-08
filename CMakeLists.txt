@@ -98,7 +98,9 @@ endif()
   
   target_link_libraries(nanobind-static PRIVATE Python::Module)
   add_library(clifford SHARED ${PYTHON_SRC_PATH}/main.cc
-  ${PYTHON_SRC_PATH}/ir.cc)
+  ${PYTHON_SRC_PATH}/ir.cc
+  ${PYTHON_SRC_PATH}/passes.cc
+  ${PYTHON_SRC_PATH}/llvm.cc)
   # add_dependencies(clifford CliffordIRTableGen CliffGPUIRTableGen)
 
   get_property(clifford_libs GLOBAL PROPERTY CLIFFORD_LIBS)
@@ -124,7 +126,9 @@ endif()
     MLIRIndexToLLVM
     MLIRGPUToROCDLTransforms
     MLIRUBToLLVM
-
+    MLIRBuiltinToLLVMIRTranslation
+    MLIRLLVMToLLVMIRTranslation
+    MLIRNVVMToLLVMIRTranslation
     # LLVM
     LLVMBitWriter
     LLVMPasses

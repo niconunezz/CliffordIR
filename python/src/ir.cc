@@ -5,8 +5,13 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
+
 
 namespace py = nanobind;
 using namespace mlir;
@@ -65,6 +70,15 @@ void init_clifford_ir(py::module_ &m) {
     // MLIR
     py::class_<MLIRContext>(m, "context")
     .def(py::new_([]() {return new MLIRContext(MLIRContext::Threading::DISABLED);}));
+
+    py::class_<PassManager>(m, "PassManager")
+    .def(py::init<MLIRContext*>())
+    .def("run", [](PassManager &self, ModuleOp &mod) {
+        if (failed(self.run(mod.getOperation())))
+            throw std::runtime_error("PassManger::run failed");
+    });
+
+    py::class_<LogicalResult>(m, "LogicalResult");
 
     py::class_<OpState>(m, "OpState")
     .def("dump", [](OpState &self) { self->dump(); })
@@ -210,12 +224,13 @@ void init_clifford_ir(py::module_ &m) {
     py::arg("fn_name"), py::arg("fn_type"), py::arg("visibility"));
 
 
-
-    // DIALECT
     m.def("register_dialects", [](MLIRContext *ctx) {
         mlir::DialectRegistry registry;
 
         registry.insert<CliffDialect>();
+        registerBuiltinDialectTranslation(registry);
+        registerLLVMDialectTranslation(registry);
+        registerNVVMDialectTranslation(registry);
 
         ctx->appendDialectRegistry(registry);
         ctx->loadAllAvailableDialects();
