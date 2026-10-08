@@ -45,8 +45,19 @@ class Backend:
         context = llvm.context()
         llvm_mod = llvm.translate_mod(mod, context)
 
-        # llvm_mod.dump()
+        # optimize
+        # todo: add more customization
+        llvm.optimize_mod(llvm_mod)
+        
+        out = str(llvm_mod)
 
+        del llvm_mod
+        del context
+        return out
+
+    @staticmethod
+    def make_ptx(llvm_ir, ctx):
+        ...
         
 
 
@@ -62,7 +73,4 @@ def compile(fn, struct):
     
     backend.make_clg(mod, context)
 
-    backend.make_llir(mod, context)
-    
-    # mod.dump()
-
+    llvm_str = backend.make_llir(mod, context)
