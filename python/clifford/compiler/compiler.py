@@ -38,8 +38,6 @@ class Backend:
         passes.llvm.create_cliffgpu_to_llvm(pm)
 
         pm.run(mod)
-        mod.dump()
-
         # llir(mlir) -> llvm(LLVM)
         llvm.init_targets()
         context = llvm.context()
@@ -56,8 +54,11 @@ class Backend:
         return out
 
     @staticmethod
-    def make_ptx(llvm_ir, ctx):
-        ...
+    def make_ptx(llvm_ir, cpu, features):
+
+        mod = llvm.llvm_to_ptx(llvm_ir, cpu, features)
+        return mod
+
         
 
 
@@ -66,11 +67,9 @@ def compile(fn, struct):
     context = ir.context()
 
     mod = struct.to_ir(context)
-    # mod.dump()
-
     backend = Backend()
     backend.make_cliff(mod, context)
-    
     backend.make_clg(mod, context)
-
     llvm_str = backend.make_llir(mod, context)
+    ptx_str = backend.make_ptx(llvm_str, "sm_80", "+ptx70")
+

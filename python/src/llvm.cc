@@ -11,9 +11,35 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
+#include "llvm/IR/Verifier.h"
 
 namespace py = nanobind;
 using namespace llvm;
+
+
+namespace {
+    // taken from triton/python/src/llvm.cc line: 860
+    std::unique_ptr<Module> getModuleFromString(std::string &llvmIR, llvm::LLVMContext &context) {
+        std::unique_ptr<llvm::MemoryBuffer> buffer =
+            llvm::MemoryBuffer::getMemBuffer(llvmIR.c_str());
+        llvm::SMDiagnostic error;
+        std::unique_ptr<Module> mod =
+            llvm::parseIR(buffer->getMemBufferRef(), error, context);
+        if (!mod) {
+        llvm::report_fatal_error(
+            "failed to parse IR: " + error.getMessage() +
+            "lineno: " + std::to_string(error.getLineNo()));
+        }
+        return mod;
+    }
+    
+}
 
 void init_llvm_ir(py::module_ &m) {
 
@@ -61,5 +87,42 @@ void init_llvm_ir(py::module_ &m) {
             LLVMInitializeNVPTXTargetMC();
             LLVMInitializeNVPTXAsmPrinter();
         });
+    });
+    
+    m.def("llvm_to_ptx", [](std::string &llvmIR, std::string cpu, std::string features) {
+        Triple triple = Triple("nvptx64-nvidia-cuda");
+        std::string err;
+        llvm::LLVMContext context;
+        std::unique_ptr<llvm::Module> mod = getModuleFromString(llvmIR, context);
+
+        const Target *target = TargetRegistry::lookupTarget(triple, err);
+        if (!target) throw std::runtime_error("lookupTarget: " + err);
+
+        TargetOptions opts;
+        std::unique_ptr<TargetMachine> tm(target->createTargetMachine(
+            triple, cpu, features, opts, Reloc::PIC_, std::nullopt, CodeGenOptLevel::Aggressive
+        ));
+
+        mod->setTargetTriple(triple);
+        mod->setDataLayout(tm->createDataLayout());
+
+        SmallString<0> buf;
+        raw_svector_ostream os(buf);
+
+        legacy::PassManager pm;
+        if (tm->addPassesToEmitFile(pm, os, nullptr, CodeGenFileType::AssemblyFile))
+            throw std::runtime_error("NVPTX can't emit PTX code");
+        
+        if (!mod)
+            throw std::runtime_error("Module cannot be runned");
+
+
+        if (llvm::verifyModule(*mod, &llvm::errs()))
+            throw std::runtime_error("invalid LLVM module");
+
+        pm.run(*mod);
+        llvm::errs() << "Here!\n";
+
+        return std::string(buf.str());
     });
 }
