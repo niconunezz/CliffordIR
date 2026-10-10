@@ -158,7 +158,7 @@ def test_geo_prod(case, cuda_ctx):
                                 bit_to_can_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
                                 N = N,
                                 els_per_thread= els_per_thread,
-                                saving_path="numerical/matrices",
+                                saving_path="numerical/matrices/pga2d/geo_prod",
                                 compile_script="./numerical/scripts/pga2d/compile_case.sh",
                                 mlir_op_name="geo_prod")
 
