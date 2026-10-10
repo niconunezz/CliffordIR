@@ -175,8 +175,8 @@ void init_clifford_ir(py::module_ &m) {
         RankedTensorType angleTy = cast<RankedTensorType>(angle.getType());
         Cliff_MultivectorType angleMvTy = cast<Cliff_MultivectorType>(angleTy.getElementType());
 
-        auto motor_mask = angleMvTy.getMask() + 1;
-        auto space = angleMvTy.getSpace();
+        auto motor_mask = srcMvTy.getMask() + 1;
+        auto space = srcMvTy.getSpace();
         auto dtype = self.getBuilder().getF32Type();
         auto mv_ty = Cliff_MultivectorType::get(ctx, motor_mask, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
         return self.create<Rotate>(RankedTensorType::get(angleTy.getShape(), mv_ty), angle, src);
