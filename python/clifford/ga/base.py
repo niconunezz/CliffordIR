@@ -85,3 +85,9 @@ class multivector:
 
 def rotate(x, angle, frontend):
     return frontend.rotate(x, angle)
+
+def geo_prod(x, y, frontend):
+    return frontend.geo_prod(x, y)
+
+def reverse(x, frontend):
+    return frontend.reverse(x)

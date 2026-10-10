@@ -186,6 +186,24 @@ void init_clifford_ir(py::module_ &m) {
         auto mv_ty = Cliff_MultivectorType::get(ctx, motor_mask, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
         return self.create<Rotate>(RankedTensorType::get(srcTy.getShape(), mv_ty), angle, src);
     })
+    .def("create_geo_prod",  [](CliffordOpBuilder &self, Value x, Value y) -> OpState {
+        MLIRContext* ctx = self.getBuilder().getContext();
+        RankedTensorType xTy = cast<RankedTensorType>(x.getType());
+        Cliff_MultivectorType xMvTy = cast<Cliff_MultivectorType>(xTy.getElementType());
+
+        RankedTensorType yTy = cast<RankedTensorType>(y.getType());
+        Cliff_MultivectorType yMvTy = cast<Cliff_MultivectorType>(yTy.getElementType());
+        auto space = xMvTy.getSpace();
+        auto algebra = dyn_cast<CliffordAlgebraAttr>(space);
+        Type dtype = self.getBuilder().getF32Type();
+        uint64_t res_mask = getResultMask(xMvTy.getMask(), yMvTy.getMask(), algebra);
+        auto mv_ty = Cliff_MultivectorType::get(ctx, res_mask, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
+        return self.create<GeoProd>(RankedTensorType::get(xTy.getShape(), mv_ty), x, y);
+    })
+    .def("create_reverse",  [](CliffordOpBuilder &self, Value x) -> OpState {
+        RankedTensorType xTy = cast<RankedTensorType>(x.getType());
+        return self.create<Reverse>(xTy, x);
+    })
     .def("create_module", [](CliffordOpBuilder &self) {
         return self.create<ModuleOp>();
     })
