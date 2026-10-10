@@ -62,16 +62,20 @@ class multivector:
         assert(isinstance(data, torch.Tensor)), "data should be a torch.tensor"
         self.data_ptr = data.data_ptr
         self.dtype = get_tensor_dtype(data.dtype)
-        self.mask = int(mask)
+        self.mask = mask if mask is None else int(mask) 
         self.algebra = algebra
         self.shape = tuple([shape for shape in data.size()])
         self.ir_value = None
 
     def to_ir(self, builder, str_to_ty_func):
         ir_scalar_dtype = str_to_ty_func(self.dtype).to_ir(builder)
+        if self.mask is None:
+            return builder.get_pointer_ty(ir_scalar_dtype)
+        
         ir_algebra = self.algebra.to_ir(builder)
         mv_ty = builder.get_multivector_ty(self.mask, ir_scalar_dtype, ir_algebra)
         self.ir_value = builder.get_ranked_tensor_ty(self.shape[1:], mv_ty)
+
         return self.ir_value
 
     def __repr__(self):

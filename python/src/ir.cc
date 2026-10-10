@@ -8,6 +8,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
+#include "clifford/Dialect/CliffGPU/IR/Dialect.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
@@ -16,6 +17,8 @@
 namespace py = nanobind;
 using namespace mlir;
 using namespace cliff;
+using namespace clg;
+
 
 class CliffordOpBuilder {  
 public:
@@ -146,6 +149,8 @@ void init_clifford_ir(py::module_ &m) {
     py::class_<mlir::FloatType>(m, "FloatType");
     
     py::class_<Cliff_MultivectorType>(m, "MultivectorType");
+    py::class_<CLG_PointerType>(m, "PointerType");
+
     py::class_<RankedTensorType>(m, "RankedTensorType");
     
     
@@ -205,6 +210,10 @@ void init_clifford_ir(py::module_ &m) {
         MLIRContext* ctx = self.getBuilder().getContext();
         return Cliff_MultivectorType::get(ctx, mask, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
     })
+    .def("get_pointer_ty", [](CliffordOpBuilder &self, Type dtype) -> Type {
+        MLIRContext* ctx = self.getBuilder().getContext();
+        return CLG_PointerType::get(ctx, dtype);
+    })
     // .def("get_point_ty", [](CliffordOpBuilder &self, GeometricKindAttr kind, bool normalized, CliffordAlgebraAttr space){
     //     MLIRContext* ctx = self.getBuilder().getContext();
     //     return Cliff_PointType::get(ctx, kind, normalized, space);
@@ -228,6 +237,7 @@ void init_clifford_ir(py::module_ &m) {
         mlir::DialectRegistry registry;
 
         registry.insert<CliffDialect>();
+        registry.insert<CliffGPUDialect>();
         registerBuiltinDialectTranslation(registry);
         registerLLVMDialectTranslation(registry);
         registerNVVMDialectTranslation(registry);
