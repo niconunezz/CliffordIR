@@ -6,6 +6,6 @@ class CliffordFrontend:
         self.builder = builder
 
 
-    def rotate(self, x, angle):
-        return self.builder.create_rotate(x, angle)
+    def rotate(self, angle, x):
+        return self.builder.create_rotate(angle, x)
     
