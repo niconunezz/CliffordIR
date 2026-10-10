@@ -60,6 +60,7 @@ class multivector:
     def __init__(self, mask, data, algebra : CliffordAlgebra):
         self.data = data
         assert(isinstance(data, torch.Tensor)), "data should be a torch.tensor"
+        self.data_ptr = data.data_ptr
         self.dtype = get_tensor_dtype(data.dtype)
         self.mask = int(mask)
         self.algebra = algebra

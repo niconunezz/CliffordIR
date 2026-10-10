@@ -172,14 +172,14 @@ void init_clifford_ir(py::module_ &m) {
     .def("create_rotate", [](CliffordOpBuilder &self, Value angle, Value src) -> OpState {
         MLIRContext* ctx = self.getBuilder().getContext();
 
-        RankedTensorType angleTy = cast<RankedTensorType>(angle.getType());
-        Cliff_MultivectorType angleMvTy = cast<Cliff_MultivectorType>(angleTy.getElementType());
+        RankedTensorType srcTy = cast<RankedTensorType>(src.getType());
+        Cliff_MultivectorType srcMvTy = cast<Cliff_MultivectorType>(srcTy.getElementType());
 
         auto motor_mask = srcMvTy.getMask() + 1;
         auto space = srcMvTy.getSpace();
         auto dtype = self.getBuilder().getF32Type();
         auto mv_ty = Cliff_MultivectorType::get(ctx, motor_mask, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
-        return self.create<Rotate>(RankedTensorType::get(angleTy.getShape(), mv_ty), angle, src);
+        return self.create<Rotate>(RankedTensorType::get(srcTy.getShape(), mv_ty), angle, src);
     })
     .def("create_module", [](CliffordOpBuilder &self) {
         return self.create<ModuleOp>();

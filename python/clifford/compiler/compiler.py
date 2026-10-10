@@ -10,6 +10,16 @@ class ASTStruct:
         return ast_to_cliff(self.fn, self, context)
 
 
+class CompiledASM:
+    def __init__(self, asm):
+        self.asm = asm 
+
+    def get_assembly(self):
+        return self.asm
+
+    
+
+
 class Backend:
     def __init__(self):
         ...
@@ -65,11 +75,13 @@ class Backend:
 def compile(fn, struct):
    
     context = ir.context()
-
     mod = struct.to_ir(context)
     backend = Backend()
     backend.make_cliff(mod, context)
     backend.make_clg(mod, context)
+
     llvm_str = backend.make_llir(mod, context)
+
     ptx_str = backend.make_ptx(llvm_str, "sm_80", "+ptx70")
 
+    return CompiledASM(ptx_str)

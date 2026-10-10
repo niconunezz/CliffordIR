@@ -100,11 +100,14 @@ endif()
   add_library(clifford SHARED ${PYTHON_SRC_PATH}/main.cc
   ${PYTHON_SRC_PATH}/ir.cc
   ${PYTHON_SRC_PATH}/passes.cc
-  ${PYTHON_SRC_PATH}/llvm.cc)
+  ${PYTHON_SRC_PATH}/llvm.cc
+  ${PYTHON_SRC_PATH}/driver.cc)
+  
   # add_dependencies(clifford CliffordIRTableGen CliffGPUIRTableGen)
 
   get_property(clifford_libs GLOBAL PROPERTY CLIFFORD_LIBS)
   get_property(clifford_plugins GLOBAL PROPERTY CLIFFORD_PLUGINS)
+  find_package(CUDAToolkit REQUIRED)
   set(CLIFFORD_LIBRARIES
     ${clifford_libs}
     ${clifford_plugins}
@@ -136,6 +139,8 @@ endif()
     LLVMAMDGPUCodeGen
     LLVMAMDGPUAsmParser
 
+    CUDA::cuda_driver
+    
     Python::Module
     nanobind-static
   )

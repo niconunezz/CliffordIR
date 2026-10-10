@@ -3,7 +3,7 @@ import ast
 import textwrap
 import re
 from ..compiler.compiler import compile, ASTStruct
-
+from .driver import GPUDriver
 
 def get_def_line(raw_src, starting_line_number):
     def_patt = r'def\s+\w+\('
@@ -45,9 +45,11 @@ class KernelFunction(KernelCallable):
 
     def __init__(self, fn):
         super().__init__(fn)
+        self.fn_name = fn.__name__
         self.__globals__ = fn.__globals__
         self.static_params = self.signature.parameters
         self.ASTStruct = ASTStruct
+
     def get_arg_names(self):
         return self.static_params.keys()
 
@@ -57,12 +59,16 @@ class KernelFunction(KernelCallable):
 
     def _compile(self, signature):
         struct = self.ASTStruct(self, signature)
-        compile(self, struct)
+        return compile(self, struct)
 
     def __call__(self, *args):        
         signature = self.get_signature(args)
         
-        self._compile(signature)
+        compiled_asm = self._compile(signature)
+        driver = GPUDriver(compiled_asm)
+        driver._run(self.fn_name, 0, ["*fp32" for i in range(len(args))], args)
+
+
 
 
 def kernel(fn):

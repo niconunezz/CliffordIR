@@ -121,7 +121,6 @@ void init_llvm_ir(py::module_ &m) {
             throw std::runtime_error("invalid LLVM module");
 
         pm.run(*mod);
-        llvm::errs() << "Here!\n";
 
         return std::string(buf.str());
     });
