@@ -55,7 +55,7 @@ public:
             return failure();
 
         MLIRContext *ctx = op.getContext();
-        auto resultMask = getResultMask(motor.getActiveMask(), obj.getActiveMask(), p, q, r);
+        auto resultMask = getResultMask(motor.getActiveMask(), obj.getActiveMask(), space);
         LLVM_DEBUG(llvm::dbgs() << "[RewriteSandwich] Computed first result mask : " << resultMask << "\n");
 
         Cliff_MultivectorType mvType = Cliff_MultivectorType::get(ctx, resultMask,

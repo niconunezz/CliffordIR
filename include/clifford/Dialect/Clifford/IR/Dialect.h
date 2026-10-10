@@ -30,7 +30,7 @@ namespace cliff {
 
     uint64_t fillWithGospersHack(int k, int n);
     bool checkWithGospersHack(int k, int n, uint64_t mask);
-    uint64_t getResultMask(uint64_t lhsMask, uint64_t  rhsMask, unsigned p, unsigned q, unsigned r);
+    uint64_t getResultMask(uint64_t lhsMask, uint64_t rhsMask, CliffordAlgebraAttr algebra);
     uint32_t getDegree(uint64_t mask, CliffordAlgebraAttr space);
 
     int reorderSign(uint64_t a, uint64_t b);

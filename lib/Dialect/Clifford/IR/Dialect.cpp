@@ -152,7 +152,8 @@ bool checkWithGospersHack(int k, int n, uint64_t mask) {
 }
 
 
-uint64_t getResultMask(uint64_t lhsMask, uint64_t rhsMask, unsigned p, unsigned q, unsigned r) {
+uint64_t getResultMask(uint64_t lhsMask, uint64_t rhsMask, CliffordAlgebraAttr algebra) {
+        unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
         uint64_t resultMask = ((lhsMask % 2 == 1) && (rhsMask % 2 == 1)) ? 1 : 0;
 
         while (lhsMask) {

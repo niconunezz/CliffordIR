@@ -47,8 +47,6 @@ LogicalResult GeoProd::verify() {
     if (!algebra)
         return emitError("algebra attribute must be a CliffordAlgebraAttr");
 
-    unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
-
     const uint64_t lhsMask = lhsTy.getMask();
     const uint64_t rhsMask = rhsTy.getMask();
     const uint64_t outMask = outTy.getMask();
@@ -85,7 +83,7 @@ LogicalResult GeoProd::verify() {
     // if the corresponding basis is active (has a non-zero factor).
     // Set this ground-rules its easy to understand the following algorithm.
 
-    uint64_t resultMask = getResultMask(lhsMaskCopy, rhsMaskCopy, p, q, r);
+    uint64_t resultMask = getResultMask(lhsMaskCopy, rhsMaskCopy, algebra);
     
     if (resultMask != outMask) 
         return emitError("The mask of the result is ") << outMask << " when it should be " << resultMask;
