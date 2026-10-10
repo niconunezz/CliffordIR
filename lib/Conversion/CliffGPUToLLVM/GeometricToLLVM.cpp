@@ -161,6 +161,7 @@ public:
             uint32_t rhsIdx = 0;
             SmallVector<Value> mvOutEls;
             auto outMaskCopy = outMask;
+
             while (outMaskCopy) {
                 int outBasis = __builtin_ctz(outMaskCopy);
                 Value acc = b.f32_val(0.0f);
@@ -175,8 +176,9 @@ public:
                 mvOutEls.push_back(acc);
                 outMaskCopy &= outMaskCopy - 1;
             }
-            assert(lhsIdx == mvLhsEls.size() && "not all elements of lhs were used");
-            assert(rhsIdx == mvRhsEls.size() && "not all elements of rhs were used");
+
+            assert(lhsIdx == mvLhsEls.size() && "not all elements of lhs were used, check multivector masks");
+            assert(rhsIdx == mvRhsEls.size() && "not all elements of rhs were used, check multivector masks");
 
             auto mvOutElsStruct = packElements(loc, mvOutEls, typeConverter, rewriter, outMv);
             llOutElements.push_back(mvOutElsStruct);
