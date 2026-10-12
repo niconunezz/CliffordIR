@@ -1,9 +1,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
+#include "llvm/Support/ErrorHandling.h" 
 #include "clifford/Dialect/Clifford/IR/Dialect.h"
-
 #include "clifford/Dialect/CliffGPU/IR/Dialect.h"
 #include "clifford/Conversion/CliffGPUToLLVM/Utility.h"
 
@@ -19,14 +18,67 @@ using namespace mlir::clg;
 
 namespace {
 
-//!TODO: think if warp-reduction is possible
-//something like: out[3] = a[3]*b[2] + a[5]*b[2] -> reduce with a warp?
-    
-class CliffGeoProdOpPattern : public OpConversionPattern<GeoProd> {
-public:
-    using OpConversionPattern::OpConversionPattern;
-    LogicalResult matchAndRewrite(GeoProd op, GeoProd::Adaptor adaptor, ConversionPatternRewriter &rewriter) const override { 
-        auto converter = getTypeConverter();
+enum class ProductKind {
+    Geometric,
+    Inner
+};
+
+struct Term {
+    int32_t lhs;
+    int32_t rhs;
+    int32_t sign;
+    int32_t out;
+};
+
+int32_t posOf(int32_t mask, int32_t basis) {
+    return __builtin_popcountll(mask & ((1 << basis) - 1));
+}
+
+
+std::vector<Term> termGenerator(ProductKind kind, int lhsMaskCopy, int rhsMaskCopy, int outMaskCopy) {
+    std::vector<Term> ret;
+
+    llvm::DenseMap<int, int> basisToOffset;
+        while (lhsMaskCopy) {
+            int lhsBasis = __builtin_ctz(lhsMaskCopy);
+            int rhsMaskIter = rhsMaskCopy;                
+            while (rhsMaskIter) {
+
+                int rhsBasis = __builtin_ctz(rhsMaskIter);
+                int newSign = 0;
+                switch (kind) {
+                    case ProductKind::Geometric: {
+                        bool hasTwoE0s = ((lhsBasis & 1) == 1) && ((rhsBasis & 1) == 1); 
+                        int sign =  (!lhsBasis || !rhsBasis) ? 1 : reorderSign(lhsBasis, rhsBasis);
+                        newSign = !hasTwoE0s * sign;
+                        break;
+                    }
+                    case ProductKind::Inner: {
+                        bool sameBasis = lhsBasis == rhsBasis;
+                        bool hasTwoE0s = (lhsBasis & 1) == 1;
+                        newSign = (sameBasis && !hasTwoE0s);
+                        break;
+                    }
+                    }
+
+                    if (newSign) {
+                        int newBasis = lhsBasis ^ rhsBasis;
+                        Term term = {lhsBasis, rhsBasis, newSign, newBasis};
+                        ret.push_back(term);
+                        
+                    }
+                    rhsMaskIter &= rhsMaskIter - 1;
+                }
+                
+                lhsMaskCopy &= lhsMaskCopy - 1;
+            }
+
+    return ret;
+};
+
+
+template <class Op>
+LogicalResult genericProduct(Op op, typename Op::Adaptor adaptor, ConversionPatternRewriter &rewriter, ProductKind kind, const TypeConverter* converter) {
         RankedTensorType lhsTensor = op.getLhs().getType();
         RankedTensorType rhsTensor = op.getRhs().getType();
         RankedTensorType outTensor = cast<RankedTensorType>(op.getOut().getType());
@@ -37,30 +89,15 @@ public:
         auto lhsTy = cast<Cliff_MultivectorType>(lhsTensor.getElementType());
         auto rhsTy = cast<Cliff_MultivectorType>(rhsTensor.getElementType());
         auto outTy = cast<Cliff_MultivectorType>(outTensor.getElementType());
-
+ 
         auto outActiveComps = __builtin_popcountll(outTy.getMask());
-        auto algebra = lhsTy.getSpace();
-
-        unsigned p = algebra.getP(), q = algebra.getQ(), r = algebra.getR();
 
         const uint64_t lhsMask = lhsTy.getMask();
         const uint64_t rhsMask = rhsTy.getMask();
         const uint64_t outMask = outTy.getMask();
 
-        uint64_t lhsMaskCopy = lhsMask;
-        uint64_t rhsMaskCopy = rhsMask;
-        uint64_t outMaskCopy = outMask;
-
-        llvm::DenseMap<int, int> basisToOffset;
-        int off = 0;
-        while (outMaskCopy) {
-            basisToOffset[__builtin_ctz(outMaskCopy)] = off;
-            off++;
-            outMaskCopy &= (outMaskCopy - 1);
-        }
-
+        std::vector<Term> terms = termGenerator(kind, lhsMask, rhsMask, outMask);
         // codegen
-        auto fpTy = rewriter.getF32Type();
         auto llAttr =
             dyn_cast<LinearEncodingAttr>(outTensor.getEncoding());
 
@@ -70,61 +107,79 @@ public:
         int32_t registerDims =
             std::max(ll.getInDimSize(kReg), 1);
 
-        SmallVector<Value> resInitializer(outActiveComps, b.f32_val(0.0f));
-        Value zeroMv = packElements(loc, resInitializer, converter, rewriter, outTy);
 
-        SmallVector<Value> outMultivectors(registerDims, zeroMv);
-        Value result = packElements(loc, outMultivectors, converter, rewriter, outTensor);
         
         auto adaptorLHS = adaptor.getLhs();
         auto adaptorRHS = adaptor.getRhs();
+        SmallVector<Term> positionTerms;
+        for (auto& t : terms) {
+            auto& [lhs, rhs, sign, newBasis] = t;
+            Term posT = {posOf(lhsMask, lhs), posOf(rhsMask, rhs), sign, posOf(outMask, newBasis)};
+            positionTerms.push_back(posT);
+        }
         
-        for (uint32_t regId = 0; regId < registerDims; ++regId) {
+        // code emiter
+        int32_t numBasisLhs = __builtin_popcount(lhsMask);
+        int32_t numBasisRhs = __builtin_popcount(rhsMask);        
+
+        
+        SmallVector<Value> outMultivectors(registerDims);
+        
+        for (uint32_t regId = 0; regId < registerDims; ++regId) {            
             auto lhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorLHS, regId);
             auto rhsMultivector= LLVM::ExtractValueOp::create(rewriter, loc, adaptorRHS, regId);
             
-            SmallVector<Value> lhsMvs= unpackElements(loc, adaptorLHS, rewriter);
-            SmallVector<Value> rhsMvs= unpackElements(loc, adaptorRHS, rewriter);
-            assert(lhsMvs.size() == rhsMvs.size() && "elements per thread should be a constant");
-            
-            int i = 0;
-            lhsMaskCopy = lhsMask;
-            while (lhsMaskCopy) {
-                int j = 0;
-                int lhsBasis = __builtin_ctz(lhsMaskCopy);
-                int rhsMaskIter = rhsMaskCopy;
+            SmallVector<bool> usedLhs(numBasisLhs, false);
+            SmallVector<bool> usedRhs(numBasisRhs, false);
+            SmallVector<Value> extractOpsLhs(numBasisLhs);
+            SmallVector<Value> extractOpsRhs(numBasisRhs);
+
+            for (auto &t : positionTerms) {
+                auto& [i, j, sign, outIndex] = t; 
                 
-                Value currLhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, lhsMultivector, i);
-                
-                while (rhsMaskIter) {
-                    int rhsBasis = __builtin_ctz(rhsMaskIter);
-                    int newBasis = lhsBasis ^ rhsBasis;
-                    int newSign = (!lhsBasis || !rhsBasis) ? 1 : 
-                    reorderSign(lhsBasis, rhsBasis) * metricSign(lhsBasis, rhsBasis, p, q, r);
-                    
-                    if (newSign != 0) {
-                        
-                        auto currRhsBasis = LLVM::ExtractValueOp::create(rewriter, loc, rhsMultivector, j);
-                        Value prod = b.fmul(currLhsBasis, currRhsBasis);
-                        Value ret = newSign==1 ? prod : b.neg(prod);
-                        
-                        int outIndex = basisToOffset[newBasis];
-                        auto acc = LLVM::ExtractValueOp::create(rewriter, loc, result, {regId, outIndex});
-                        Value currOutVal = b.fadd(acc, ret);                    
-                        result = LLVM::InsertValueOp::create(rewriter, loc, result, currOutVal, {regId, outIndex});
-                        
-                    }
-                    
-                    rhsMaskIter &= rhsMaskIter - 1;
-                    ++j;
+                if (!usedLhs[i]) {
+                    extractOpsLhs[i] = LLVM::ExtractValueOp::create(rewriter, loc, lhsMultivector, i);
+                    usedLhs[i] = true;
                 }
-                
-                lhsMaskCopy &= lhsMaskCopy - 1;
-                ++i;
+
+                if (!usedRhs[j]) {
+                    extractOpsRhs[j] = LLVM::ExtractValueOp::create(rewriter, loc, rhsMultivector, j);
+                    usedRhs[j] = true;
+                }
             }
+            
+            SmallVector<Value> accVector(outActiveComps, b.f32_val(0.0f));
+
+            for (auto &t : positionTerms) {
+                auto& [i, j, sign, outIndex] = t;
+                Value currLhsBasis = extractOpsLhs[i];
+                Value currRhsBasis = extractOpsRhs[j];
+                Value prod = b.fmul(currLhsBasis, currRhsBasis);
+                Value ret = sign==1 ? prod : b.neg(prod);
+                
+                auto acc = accVector[outIndex];
+                accVector[outIndex] = b.fadd(acc, ret);
+            }
+            Value packedAccs = packElements(loc, accVector, converter, rewriter, outTy);
+            outMultivectors[regId] = packedAccs;
+            
         }
+        Value result = packElements(loc, outMultivectors, converter, rewriter, outTensor);
+
         rewriter.replaceOp(op, result);
         return success();
+};
+
+
+//!TODO: think if warp-reduction is possible
+//something like: out[3] = a[3]*b[2] + a[5]*b[2] -> reduce with a warp?
+class CliffGeoProdOpPattern : public OpConversionPattern<GeoProd> {
+public:
+    using OpConversionPattern::OpConversionPattern;
+    LogicalResult matchAndRewrite(GeoProd op, GeoProd::Adaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+
+        auto converter = getTypeConverter();
+        return genericProduct<GeoProd>(op, adaptor, rewriter, ProductKind::Geometric, converter);
     }
 };
 
