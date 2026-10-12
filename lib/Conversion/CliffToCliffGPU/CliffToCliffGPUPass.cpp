@@ -121,6 +121,7 @@ void populateCliffPatterns(CliffGPUTypeConverter &typeConverter, RewritePatternS
         CliffFuncOpPattern,
         CliffReturnOpPattern,
         GenericOpPattern<GeoProd>,
+        GenericOpPattern<InnerProd>,
         GenericOpPattern<Rotate>,
         GenericOpPattern<Translate>,
         GenericOpPattern<Exp>,

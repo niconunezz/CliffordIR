@@ -141,6 +141,16 @@ def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
     let hasVerifier = 1;
 }
 
+def Cliff_InnerProd : Cliff_Op<"inner_prod", [Pure]> {
+    let summary = "Compute the inner product between two multivectors";
+
+    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
+    let results = (outs Cliff_GeometricKindTensor:$out);
+
+    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
+    // let hasVerifier = 1;
+}
+
 def Cliff_Translate : Cliff_Op<"translate", [Pure]> {
     let summary = "Translate a point";
 
