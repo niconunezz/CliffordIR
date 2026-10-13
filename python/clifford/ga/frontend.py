@@ -12,6 +12,9 @@ class CliffordFrontend:
     def geo_prod(self, x, y):
         return self.builder.create_geo_prod(x, y)
 
+    def inner_prod(self, x, y):
+        return self.builder.create_inner_prod(x, y)
+
     def reverse(self, x):
         return self.builder.create_reverse(x)
     

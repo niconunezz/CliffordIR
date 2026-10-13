@@ -91,3 +91,6 @@ def geo_prod(x, y, frontend):
 
 def reverse(x, frontend):
     return frontend.reverse(x)
+
+def inner_prod(x, y, frontend):
+    return frontend.inner_prod(x, y)

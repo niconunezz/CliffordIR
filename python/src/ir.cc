@@ -200,6 +200,16 @@ void init_clifford_ir(py::module_ &m) {
         auto mv_ty = Cliff_MultivectorType::get(ctx, res_mask, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
         return self.create<GeoProd>(RankedTensorType::get(xTy.getShape(), mv_ty), x, y);
     })
+    .def("create_inner_prod", [](CliffordOpBuilder &self, Value x, Value y) -> OpState {
+        MLIRContext* ctx = self.getBuilder().getContext();
+        RankedTensorType xTy = cast<RankedTensorType>(x.getType());
+        Cliff_MultivectorType xMvTy = cast<Cliff_MultivectorType>(xTy.getElementType());
+
+        auto space = xMvTy.getSpace();
+        Type dtype = self.getBuilder().getF32Type();
+        auto mv_ty = Cliff_MultivectorType::get(ctx, 1, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
+        return self.create<InnerProd>(RankedTensorType::get(xTy.getShape(), mv_ty), x, y);
+    })
     .def("create_reverse",  [](CliffordOpBuilder &self, Value x) -> OpState {
         RankedTensorType xTy = cast<RankedTensorType>(x.getType());
         return self.create<Reverse>(xTy, x);

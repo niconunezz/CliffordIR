@@ -171,6 +171,92 @@ def test_geo_prod(case, cuda_ctx):
     assert(np.allclose(result_host, expected, atol=1e-5))
 
 
+CASES_INNER = [
+    ("scalar_e0e1e2",  [mv_scalar, mve0e1e2], [1, 4], 1, 64, 1),
+    ("e12__e12",       [mve12, mve12], [2, 2], 1, 128, 1),
+    ("e12__e12",       [mve12, mve12], [2, 2], 1, 4096, 16),
+    ("e02__e02",       [mve02, mve02], [2, 2], 1, 64, 1),
+    ("e01__e01",       [mve01, mve01], [2, 2], 1, 128, 4),
+    ("e01e02__e01e02", [mve01e02, mve01e02], [3, 3], 1, 64, 1),
+    ("e01e12__e01e12", [mve01e12, mve01e12], [3, 3], 1, 64, 1),
+    ("e02e12__e02e12", [mve02e12, mve02e12], [3, 3], 1, 4096, 4),
+    ("e1e12__e0e01",   [mve1e12, mve0e01], [3, 3], 1, 64, 1),
+    ("full__full",     [mvfull, mvfull], [4, 4], 1, 128, 4),
+    ("scalar__full",   [lambda a: a*e1*e1, mvfull], [1, 4], 1, 64, 1),
+    ("full__scalar",   [mvfull, lambda a: a*e1*e1], [4, 1], 1, 64, 1),
+    ("complete__complete", [mve0e1e2e01e02e12e012, mve0e1e2e01e02e12e012], [8, 8], 1, 128, 1),
+
+    ("e0__e0",         [mve0, mve0], [2, 2], 1, 64, 1),
+    ("e1__e1",         [mve1, mve1], [2, 2], 1, 64, 1),
+    ("e2__e2",         [mve2, mve2], [2, 2], 1, 64, 1),
+    ("e0e1__e0e2",     [mve0e1, mve0e2], [3, 3], 1, 64, 2),
+    ("e0e1__e1e2",     [mve0e1, mve1e2], [3, 3], 1, 8192, 4),
+    ("e0e2__e1e2",     [mve0e2, mve1e2], [3, 3], 1, 4096, 4),
+    ("e0e1e2__e0e1e2", [mve0e1e2, mve0e1e2], [4, 4], 1, 512, 2),
+    ("e0e1__e12",      [mve0e1, mve12], [3, 2], 1, 64, 1),
+    ("e0e2__e12",      [mve0e2, mve12], [3, 2], 1, 64, 2),
+    ("e1e2__e12",      [mve1e2, mve12], [3, 2], 1, 4096, 1),
+    ("e0e1e2__full",   [mve0e1e2, mvfull], [4, 4], 1, 64, 2),
+    ("e12__e1",        [mve12, mve1], [2, 2], 1, 64, 1),
+    ("e01__e0",        [mve01, mve0], [2, 2], 1, 512, 8),
+    ("full__e0e1e2",   [mvfull, mve0e1e2], [4, 4], 1, 4096, 1),
+
+    ("e012__scalar",   [mve012, lambda a: a*e1*e1], [2, 1], 1, 64, 1),
+    ("e012__e012",     [mve012, mve012], [2, 2], 1, 64, 1),
+    ("e012__e0",       [mve012, mve0], [2, 2], 1, 64, 1),
+    ("e012__e1",       [mve012, mve1], [2, 2], 1, 64, 1),
+    ("e012__e0e1e2",   [mve012, mve0e1e2], [2, 4], 1, 512, 1),
+    ("e012__e01",      [mve012, mve01], [2, 2], 1, 1024, 8),
+    ("e012__e12",      [mve012, mve12], [2, 2], 1, 8192, 1),
+    ("e012__full",     [mve012, mvfull], [2, 4], 1, 64, 1),
+
+    ("e01e012__e01e012",     [mve01e012, mve01e012], [3, 3], 1, 512, 1),
+    ("e12e012__e12e012",     [mve12e012, mve12e012], [3, 3], 1, 64, 1),
+    ("full_e012__full_e012", [mvfull_e012, mvfull_e012], [5, 5], 1, 64, 1),
+    ("e0e1e2__e01e02e012",   [mve0e1e2, mve01e02e012], [4, 4], 1, 64, 1),
+
+    ("e0e012__e0e012",   [mve0e012, mve0e012], [3, 3], 1, 64, 1),
+    ("e1e012__e1e012",   [mve1e012, mve1e012], [3, 3], 1, 512, 1),
+    ("e0e012__full",     [mve0e012, mvfull], [3, 4], 1, 4096, 4),
+    ("e1e012__full",     [mve1e012, mvfull], [3, 4], 1, 8192, 1),
+
+    ("e0e12__e0e12",         [mve0e12, mve0e12], [3, 3], 1, 512, 1),
+    ("e0e12__full",          [mve0e12, mvfull], [3, 4], 1, 8192, 1),
+    ("e1e01__e1e01",         [mve1e01, mve1e01], [3, 3], 1, 4096, 1),
+    ("e0e1e01__e0e1e01",     [mve0e1e01, mve0e1e01], [4, 4], 1, 512, 1),
+    ("e0e1e12__e1e2e12",     [mve0e1e12, mve1e2e12], [4, 4], 1, 128, 4),
+]
+
+@pytest.mark.parametrize("case", CASES_INNER, ids=[c[0] for c in CASES_INNER])
+def test_inner_prod(case, cuda_ctx):
+    name, mvs, comps, comps_c, N, els_per_thread = case
+
+    gfunc = lambda a, b : (~a * b)(0)
+
+    gaTestConfig = GATestConfig(algebra=MODE,
+                                mvs = mvs,
+                                comps = comps,
+                                geoTys= [GeometricObj.Unknown, GeometricObj.Unknown],
+                                objTys = [ObjectType.Unknown, ObjectType.Unknown],
+                                comps_c= comps_c, objTy_c=ObjectType.Unknown, geoTy_c=GeometricObj.Unknown,
+                                func=gfunc,
+                                can_to_bit_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
+                                bit_to_can_perm=np.array([0, 1, 2, 4, 3, 5, 6, 7]),
+                                N = N,
+                                els_per_thread= els_per_thread,
+                                saving_path="numerical/matrices/pga2d/inner_prod",
+                                compile_script="./numerical/scripts/pga2d/compile_inner.sh",
+                                mlir_op_name="inner_prod")
+
+    matrixGen = MatrixGenerator(gaTestConfig)
+    result_host, expected = run_ga_kernel_test(gaTestConfig, matrixGen)
+    
+    if DEBUG and not np.allclose(result_host, expected, atol=1e-4):
+        print_debug_info(result_host, expected, comps_c, N)
+
+    assert(np.allclose(result_host, expected, atol=1e-5))
+
+
 CASES_ROTATE = [
     ("N32_1",       [mv_point,    mv_scalar],    [3, 1], 4,   32,   1),
     ("N64_1",       [mv_point,    mv_scalar],    [3, 1], 4,   64,   1),

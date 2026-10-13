@@ -183,6 +183,18 @@ public:
     }
 };
 
+
+class CliffInnerProdOpPattern : public OpConversionPattern<InnerProd> {
+public:
+    using OpConversionPattern::OpConversionPattern;
+    LogicalResult matchAndRewrite(InnerProd op, InnerProd::Adaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+
+        auto converter = getTypeConverter();
+        return genericProduct<InnerProd>(op, adaptor, rewriter, ProductKind::Inner, converter);
+    }
+};
+
+
 class CliffAddOpPattern : public OpConversionPattern<Add> {
 public:
     using OpConversionPattern::OpConversionPattern;
@@ -438,6 +450,7 @@ void mlir::cliff::populateGeometricToLLVMPatterns(CliffGPUToLLVMTypeConverter &t
                     CliffReverseOpPattern,
                     CliffSinOpPattern,
                     CliffCosOpPattern,
-                    CliffAddOpPattern
+                    CliffAddOpPattern,
+                    CliffInnerProdOpPattern
                     >(typeConverter, context);
 }

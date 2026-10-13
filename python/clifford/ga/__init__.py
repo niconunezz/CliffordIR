@@ -1,4 +1,4 @@
-from .base import fp32, CliffordAlgebra, multivector, rotate, geo_prod, reverse
+from .base import fp32, CliffordAlgebra, multivector, rotate, geo_prod, reverse, inner_prod
 from .frontend import CliffordFrontend
 
 __all__ = [
@@ -7,7 +7,8 @@ __all__ = [
     "multivector",
     "rotate",
     "geo_prod",
-    "reverse"
+    "reverse",
+    "inner_prod"
 ]
 
 
