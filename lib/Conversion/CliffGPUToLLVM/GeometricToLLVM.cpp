@@ -154,11 +154,10 @@ LogicalResult genericProduct(Op op, typename Op::Adaptor adaptor, ConversionPatt
                 auto& [i, j, sign, outIndex] = t;
                 Value currLhsBasis = extractOpsLhs[i];
                 Value currRhsBasis = extractOpsRhs[j];
-                Value prod = b.fmul(currLhsBasis, currRhsBasis);
-                Value ret = sign==1 ? prod : b.neg(prod);
                 
                 auto acc = accVector[outIndex];
-                accVector[outIndex] = b.fadd(acc, ret);
+                Value modLhs = sign==1 ? currLhsBasis : b.neg(currLhsBasis);
+                accVector[outIndex] = b.fma(modLhs, currRhsBasis, acc);
             }
             Value packedAccs = packElements(loc, accVector, converter, rewriter, outTy);
             outMultivectors[regId] = packedAccs;
