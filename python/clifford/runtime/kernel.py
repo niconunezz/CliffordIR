@@ -4,6 +4,8 @@ import textwrap
 import re
 from ..compiler.compiler import compile, ASTStruct
 from .driver import GPUDriver
+from .cache import get_cache_key, CacheManager 
+import hashlib
 
 def get_def_line(raw_src, starting_line_number):
     def_patt = r'def\s+\w+\('
@@ -27,12 +29,13 @@ class KernelCallable:
     def __init__(self, fn):
         self.fn = fn
         self.signature = inspect.signature(fn)
+        self.body = inspect.signature(fn)
         self.raw_src, self.starting_line_number = inspect.getsourcelines(fn)
         raw_src_str = "".join(self.raw_src)
         src = textwrap.dedent(raw_src_str)
         src = src[re.search(r"^def\s+\w+\s*\(", src, re.MULTILINE).start():]
         self._src = src
-
+        self.hash = None
         self.def_line = get_def_line(self.raw_src, self.starting_line_number)
         self.def_col = get_def_col(raw_src_str)
         self.file_name = fn.__code__.co_filename
@@ -40,6 +43,16 @@ class KernelCallable:
     def parse(self):
         return ast.parse(self._src)
 
+    @property
+    def compute_key(self):
+
+        if self.hash is not None:
+            return self.hash
+        self.hash = hashlib.sha256(self._src.encode("utf-8")).hexdigest()
+        return self.hash
+
+    def __hash__(self):
+        return hash(self.compute_key)
 
 class KernelFunction(KernelCallable):
 
@@ -65,9 +78,7 @@ class KernelFunction(KernelCallable):
         signature = self.get_signature(args)
         
         compiled_asm = self._compile(signature)
-        driver = GPUDriver(compiled_asm)
-        driver._run(self.fn_name, 0, ["*fp32" for i in range(len(args))], args)
-
+        compiled_asm.run_kernel(0, args)
 
 
 

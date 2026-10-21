@@ -12,7 +12,8 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
-
+#include "mlir/IR/OperationSupport.h"
+// #include "mlir/Parser.h"
 
 namespace py = nanobind;
 using namespace mlir;
@@ -67,6 +68,13 @@ private:
     std::unique_ptr<Location> lastLoc;
 };
 
+OpPrintingFlags getOpPrintingFlags() {
+  auto printingFlags = OpPrintingFlags();
+  printingFlags.enableDebugInfo();
+  printingFlags.printNameLocAsPrefix(true);
+  return printingFlags;
+}
+
 void init_clifford_ir(py::module_ &m) {
     using ret = py::rv_policy;
 
@@ -89,6 +97,14 @@ void init_clifford_ir(py::module_ &m) {
 
     py::class_<ModuleOp, OpState>(m, "module")
     .def("dump", &ModuleOp::dump)
+    .def("str",
+        [](ModuleOp &self) -> std::string {
+            std::string str;
+            llvm::raw_string_ostream os(str);
+            auto printingFlags = getOpPrintingFlags();
+            self.print(os, printingFlags);
+            return str;
+        })
     .def("push_back", [](ModuleOp &self, FuncOp &funcOp) {
         self.push_back(funcOp);
     })
@@ -260,6 +276,9 @@ void init_clifford_ir(py::module_ &m) {
     },
     py::arg("fn_name"), py::arg("fn_type"), py::arg("visibility"));
 
+    // m.def("parse_source", [](std::string sourceStr, MLIRContext *ctx) -> ModuleOp {
+    //     return parseSourceString<ModuleOp>(sourceStr, context);
+    // })
 
     m.def("register_dialects", [](MLIRContext *ctx) {
         mlir::DialectRegistry registry;
