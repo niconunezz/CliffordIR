@@ -35,8 +35,10 @@ int32_t posOf(int32_t mask, int32_t basis) {
 }
 
 
-std::vector<Term> termGenerator(ProductKind kind, int lhsMaskCopy, int rhsMaskCopy, int outMaskCopy) {
+std::vector<Term> termGenerator(ProductKind kind, int lhsMaskCopy, int rhsMaskCopy, int outMaskCopy, CliffordAlgebraAttr space) {
     std::vector<Term> ret;
+    // todo: do this better
+    int p = space.getP(), q= space.getQ(), r= space.getR();
 
     llvm::DenseMap<int, int> basisToOffset;
         while (lhsMaskCopy) {
@@ -48,7 +50,10 @@ std::vector<Term> termGenerator(ProductKind kind, int lhsMaskCopy, int rhsMaskCo
                 int newSign = 0;
                 switch (kind) {
                     case ProductKind::Geometric: {
-                        bool hasTwoE0s = ((lhsBasis & 1) == 1) && ((rhsBasis & 1) == 1); 
+                        bool hasTwoE0s = false;
+                        if (r > 0)
+                            hasTwoE0s = ((lhsBasis & 1) == 1) && ((rhsBasis & 1) == 1); 
+                        
                         int sign =  (!lhsBasis || !rhsBasis) ? 1 : reorderSign(lhsBasis, rhsBasis);
                         newSign = !hasTwoE0s * sign;
                         break;
@@ -95,8 +100,9 @@ LogicalResult genericProduct(Op op, typename Op::Adaptor adaptor, ConversionPatt
         const uint64_t lhsMask = lhsTy.getMask();
         const uint64_t rhsMask = rhsTy.getMask();
         const uint64_t outMask = outTy.getMask();
-
-        std::vector<Term> terms = termGenerator(kind, lhsMask, rhsMask, outMask);
+        
+        auto space = lhsTy.getSpace();
+        std::vector<Term> terms = termGenerator(kind, lhsMask, rhsMask, outMask, space);
         // codegen
         auto llAttr =
             dyn_cast<LinearEncodingAttr>(outTensor.getEncoding());
