@@ -13,7 +13,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/IR/OperationSupport.h"
-// #include "mlir/Parser.h"
+#include "mlir/IR/BuiltinAttributes.h"
 
 namespace py = nanobind;
 using namespace mlir;
@@ -169,7 +169,6 @@ void init_clifford_ir(py::module_ &m) {
 
     py::class_<RankedTensorType>(m, "RankedTensorType");
     
-    
     // Attributes
     py::class_<Attribute>(m, "Attribute")
     .def("dump", &Attribute::dump);
@@ -229,6 +228,25 @@ void init_clifford_ir(py::module_ &m) {
     .def("create_reverse",  [](CliffordOpBuilder &self, Value x) -> OpState {
         RankedTensorType xTy = cast<RankedTensorType>(x.getType());
         return self.create<Reverse>(xTy, x);
+    })
+    .def("create_get_grade", [](CliffordOpBuilder &self, Value x, int grade_value) -> OpState {
+        
+        MLIRContext* ctx = self.getBuilder().getContext();
+        RankedTensorType xTy = cast<RankedTensorType>(x.getType());
+        Cliff_MultivectorType xMvTy = cast<Cliff_MultivectorType>(xTy.getElementType());
+        Type dtype = self.getBuilder().getF32Type();
+        
+        auto space = xMvTy.getSpace();
+        auto algebra = dyn_cast<CliffordAlgebraAttr>(space);
+        auto numDims = algebra.getP() + algebra.getQ() + algebra.getR();
+        auto srcMask = xMvTy.getMask();
+        uint64_t res_mask = srcMask & fillWithGospersHack(grade_value, numDims);
+
+        auto grade = IntegerAttr::get(IntegerType::get(ctx, 64),
+                                      grade_value);
+
+        auto mv_ty = Cliff_MultivectorType::get(ctx, res_mask, dtype, GeometricKindAttr::get(ctx, GeometricKind::Unknown), space);
+        return self.create<Grade>(RankedTensorType::get(xTy.getShape(), mv_ty), x, grade);
     })
     .def("create_module", [](CliffordOpBuilder &self) {
         return self.create<ModuleOp>();

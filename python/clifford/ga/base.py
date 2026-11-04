@@ -94,3 +94,6 @@ def reverse(x, frontend):
 
 def inner_prod(x, y, frontend):
     return frontend.inner_prod(x, y)
+
+def get_grade(x, grade, frontend):
+    return frontend.get_grade(x, grade)

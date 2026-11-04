@@ -53,7 +53,14 @@ class CodeGenerator(ast.NodeVisitor):
 
     def visit_arg(self, node):
         if hasattr(node, "ctx"):
-            return node.id
+            return self.visit(node)
+        if hasattr(node, "value"):
+            return node.value
+        if hasattr(node, "annotation"):
+            return
+        else:
+            print(node)
+            raise Exception("Argument type unknown")
 
     def visit_Name(self, node):
         return self.lookup_name(node.id)
@@ -77,7 +84,8 @@ class CodeGenerator(ast.NodeVisitor):
         return getattr(lhs, attr)
 
     def call_Function(self, node, fn, args):
-        values = [self.locals[arg] for arg in args]
+        
+        values = [self.locals[arg] if isinstance(arg, str) else arg for arg in args]
         return fn(*values, self.frontend)
 
     def visit_Return(self, node):

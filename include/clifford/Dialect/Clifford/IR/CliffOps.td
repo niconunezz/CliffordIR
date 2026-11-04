@@ -281,25 +281,15 @@ def Cliff_Normalize : Cliff_Op<"normalize", [Pure, SameOperandsAndResultType]> {
 
 //TODO : check result type of sign
 
-def Cliff_Sign : Cliff_Op<"sign", [Pure, SameOperandsAndResultType]> {
-    let summary = "Obtain a multivectors sign";
 
-    let arguments = (ins Cliff_GeometricKindTensor:$src);
+def Cliff_Grade : Cliff_Op<"get_grade", [Pure]> {
+    let summary = "Obtain a multivectors i grade";
+
+    let arguments = (ins Cliff_GeometricKindTensor:$src, I64Attr:$grade);
     let results = (outs Cliff_GeometricKindTensor:$out);
 
-    let assemblyFormat = "$src attr-dict `:` type($out)";
+    let assemblyFormat =
+    "$src `,` $grade attr-dict `:` type($src) `->` type($out)";
 
-    // let hasVerifier = 1;
-}
-
-
-def Cliff_Idx : Cliff_Op<"get_idx", [Pure]> {
-    let summary = "Obtain a multivectors i part";
-
-    let arguments = (ins Cliff_GeometricKindTensor:$src, Cliff_Int:$idx);
-    let results = (outs Cliff_GeometricKindTensor:$out);
-
-    let assemblyFormat = "$src `,` $idx attr-dict `:` type($src) `,` type($idx)  `->` type($out)";
-
-    // let hasVerifier = 1;
+    let hasVerifier = 1;
 }

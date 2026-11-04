@@ -1,5 +1,3 @@
-from .._C.libclifford import ir
-
 class CliffordFrontend:
     
     def __init__(self, builder):
@@ -17,4 +15,7 @@ class CliffordFrontend:
 
     def reverse(self, x):
         return self.builder.create_reverse(x)
+
+    def get_grade(self, x, grade):
+        return self.builder.create_get_grade(x, grade)
     

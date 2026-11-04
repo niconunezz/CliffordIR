@@ -110,6 +110,34 @@ LogicalResult Rotate::verify() {
 
 }
 
+LogicalResult Grade::verify() {
+    auto srcTensorTy = dyn_cast<RankedTensorType>(getSrc().getType());
+    auto outTensorTy = dyn_cast<RankedTensorType>(getOut().getType());
+
+    auto srcTy = dyn_cast<Cliff_MultivectorType>(srcTensorTy.getElementType());
+    auto outTy = dyn_cast<Cliff_MultivectorType>(outTensorTy.getElementType());
+    
+    auto space = dyn_cast<CliffordAlgebraAttr>(srcTy.getSpace());
+    uint32_t p = space.getP(), q = space.getQ(), r = space.getR();
+    uint32_t numDims = p + q + r;
+    IntegerAttr gradeAttr = getGradeAttr();
+    uint64_t value = gradeAttr.getValue().getZExtValue();
+
+    if (value > numDims)
+        return failure();
+    
+    auto srcMask = srcTy.getMask();
+
+    auto outMask = outTy.getMask();
+    auto refOutMask = fillWithGospersHack(value, numDims) & srcMask;
+    
+    if (outMask != refOutMask)
+        return emitError("out mask is not correct ") << "should be " << refOutMask;
+
+
+    return success();
+}
+
 LogicalResult Add::verify() {
     auto lhsTensorTy = dyn_cast<RankedTensorType>(getLhs().getType());
     auto rhsTensorTy = dyn_cast<RankedTensorType>(getRhs().getType());

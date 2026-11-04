@@ -126,7 +126,8 @@ void populateCliffPatterns(CliffGPUTypeConverter &typeConverter, RewritePatternS
         GenericOpPattern<Translate>,
         GenericOpPattern<Exp>,
         GenericOpPattern<Reverse>,
-        GenericOpPattern<Sandwich>
+        GenericOpPattern<Sandwich>,
+        GenericOpPattern<Grade>
 
     >(typeConverter, context);
 

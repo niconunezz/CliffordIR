@@ -200,6 +200,52 @@ public:
 };
 
 
+class CliffGradeOpPattern : public OpConversionPattern<Grade> {
+public:
+    using OpConversionPattern::OpConversionPattern;
+    LogicalResult matchAndRewrite(Grade op, Grade::Adaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+
+        auto loc = op.getLoc();
+        auto typeConverter = getTypeConverter();
+        RankedTensorType srcTensor = cast<RankedTensorType>(op.getSrc().getType());        
+        RankedTensorType outTensor = cast<RankedTensorType>(op.getOut().getType());
+        Cliff_MultivectorType srcMv = cast<Cliff_MultivectorType>(srcTensor.getElementType());
+        Cliff_MultivectorType outMv = cast<Cliff_MultivectorType>(outTensor.getElementType());
+        const auto outMask = outMv.getMask();
+        const auto srcMask = srcMv.getMask();
+
+        const auto iterMask = outMask & srcMask;
+        
+        auto llSrcTensors = adaptor.getSrc();
+
+        SmallVector<Value> llSrcElements = unpackElements(loc, llSrcTensors, rewriter);
+        SmallVector<Value> llOutElements;
+        for (uint32_t i = 0; i < llSrcElements.size(); i++) {
+            auto mvSrcEls = unpackElements(loc, llSrcElements[i], rewriter);
+            auto srcMaskCopy = srcMask;
+            SmallVector<Value> mvOutEls;
+
+            uint32_t idx = 0;
+            while (srcMaskCopy)
+            {
+                int srcBasis = __builtin_ctz(srcMaskCopy);
+                if (outMv.isActiveComponent(srcBasis))
+                    mvOutEls.push_back(mvSrcEls[idx]);
+                
+                srcMaskCopy &= srcMaskCopy - 1;
+                idx++;
+            }
+            
+            auto packedMv = packElements(loc, mvOutEls, typeConverter, rewriter, outMv);
+            llOutElements.push_back(packedMv);
+        }
+
+        auto ret = packElements(loc, llOutElements, typeConverter, rewriter, outTensor);
+        rewriter.replaceOp(op, ret);
+        return success();
+    }
+};
+
 class CliffAddOpPattern : public OpConversionPattern<Add> {
 public:
     using OpConversionPattern::OpConversionPattern;
@@ -456,6 +502,7 @@ void mlir::cliff::populateGeometricToLLVMPatterns(CliffGPUToLLVMTypeConverter &t
                     CliffSinOpPattern,
                     CliffCosOpPattern,
                     CliffAddOpPattern,
-                    CliffInnerProdOpPattern
+                    CliffInnerProdOpPattern,
+                    CliffGradeOpPattern
                     >(typeConverter, context);
 }
