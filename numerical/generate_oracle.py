@@ -2,7 +2,7 @@ import numpy as np
 from helpers import ObjectType, GeometricObj
 import os
 
-class MatrixGenerator():
+class MatrixGenerator:
     def __init__(self, GATestConfig):
         self.__conf_obj = GATestConfig
         self.__matrices = self.init_matrices()

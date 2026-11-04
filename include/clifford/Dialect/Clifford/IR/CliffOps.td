@@ -1,4 +1,5 @@
 include "clifford/Dialect/Clifford/IR/CliffTypes.td"
+include "clifford/Dialect/Clifford/IR/CliffAttrDefs.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td" // SymbolUserOpInterface
 include "mlir/IR/OpAsmInterface.td" // OpAsmOpInterface
@@ -7,6 +8,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td" // Pure
 include "mlir/Interfaces/ControlFlowInterfaces.td" // BranchOpInterface
 include "mlir/Interfaces/InferTypeOpInterface.td" // SameOperandsAndResultType
 include "mlir/Interfaces/CallInterfaces.td" // CallOpInterface
+include "mlir/IR/AttrTypeBase.td"
 
 
 
@@ -106,29 +108,6 @@ def Cliff_Add : Cliff_Op<"add", [Pure]> {
     let hasVerifier = 1;
 }
 
-def Cliff_Sub : Cliff_Op<"sub", [Pure, ]> {
-    let summary = "Compute the substraction between two multivectors";
-
-    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
-    let results = (outs Cliff_GeometricKindTensor:$out);
-
-    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `+` type($rhs) `->` type($out)";
-
-    let hasVerifier = 1;
-}
-
-def Cliff_Constant : Cliff_Op<"constant", [ConstantLike, Pure, AllTypesMatch<["value", "result"]>]> {
-    let summary = "Define a constant multivector";
-
-    //TODO : make this fp
-    let arguments = (ins AnyIntElementsAttr :$value);
-    let results = (outs Cliff_GeometricKindTensor:$result);
-
-    let assemblyFormat = "$value attr-dict `:` type($result) ";
-    // let hasVerifier = 1;
-}
-
-
 def Cliff_GeoProd : Cliff_Op<"geo_prod", [Pure]> {
     let summary = "Compute the geometric product between two multivectors";
 
@@ -189,42 +168,6 @@ def Cliff_CosOp : Cliff_Op<"cos", [Pure, SameOperandsAndResultType]> {
 }
 
 
-def Cliff_Vee : Cliff_Op<"vee", [Pure]> {
-    let summary = "Compute the vee between two multivectors";
-
-    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
-    let results = (outs Cliff_GeometricKindTensor:$out);
-
-    // let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
-    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
-
-
-    // let hasVerifier = 1;
-}
-
-def Cliff_Wedge : Cliff_Op<"wedge", [Pure]> {
-    let summary = "Compute the wedge between two multivectors";
-
-    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
-    let results = (outs Cliff_GeometricKindTensor:$out);
-
-    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
-
-    // let hasVerifier = 1;
-}
-
-def Cliff_Dot : Cliff_Op<"dot", [Pure]> {
-    let summary = "Compute the dot between two multivectors";
-
-    let arguments = (ins Cliff_GeometricKindTensor:$lhs, Cliff_GeometricKindTensor:$rhs);
-    let results = (outs Cliff_GeometricKindTensor:$out);
-
-    let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `*` type($rhs) `->` type($out)";
-
-
-    // let hasVerifier = 1;
-}
-
 def Cliff_Reverse : Cliff_Op<"reverse", [Pure]> {
     let summary = "Compute the reverse of a multivector";
 
@@ -247,17 +190,6 @@ def Cliff_Sandwich : Cliff_Op<"sandwich", [Pure]> {
     // let hasVerifier = 1;
 }
 
-def Cliff_Dual : Cliff_Op<"dual", [Pure, SameOperandsAndResultType]> {
-    let summary = "Compute the dual of a multivector";
-
-    let arguments = (ins Cliff_GeometricKindTensor:$src);
-    let results = (outs Cliff_GeometricKindTensor:$out);
-
-    let assemblyFormat = "$src attr-dict `:` type($out)";
-
-    // let hasVerifier = 1;
-}
-
 
 def Cliff_Exp : Cliff_Op<"exp", [Pure]> {
     let summary = "Compute the exponential of a multivector";
@@ -267,17 +199,6 @@ def Cliff_Exp : Cliff_Op<"exp", [Pure]> {
     let assemblyFormat = "$src attr-dict `:` type($src) `->` type($out)";
 }
 
-
-def Cliff_Normalize : Cliff_Op<"normalize", [Pure, SameOperandsAndResultType]> {
-    let summary = "Normalize a multivector";
-
-    let arguments = (ins Cliff_GeometricKindTensor:$src);
-    let results = (outs Cliff_GeometricKindTensor:$out);
-
-    let assemblyFormat = "$src attr-dict `:` type($out)";
-
-    // let hasVerifier = 1;
-}
 
 //TODO : check result type of sign
 
