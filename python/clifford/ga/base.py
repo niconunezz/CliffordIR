@@ -16,14 +16,14 @@ class CliffordAlgebra:
         return builder.get_algebra(self.p, self.q, self.r)
 
 class ObjectKind(Enum):
-    Euclidean = 1
-    Ideal = 2
-    Unknown = 3
+    Euclidean = auto()
+    Ideal = auto()
+    Unknown = auto()
 
 class GeometricKind(Enum):
-    Point = 1
-    Line = 2
-    Plane = 3
+    Point = auto()
+    Line = auto()
+    Plane = auto()
 
 class GeometricElement:
     def __init__(self, geo_kind, obj_kind, normalized, algebra):
