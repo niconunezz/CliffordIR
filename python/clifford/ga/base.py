@@ -1,17 +1,17 @@
 from .._C.libclifford import ir
-from enum import Enum
+from dataclasses import dataclass
+from enum import Enum, auto
 import torch
 
-
+@dataclass(frozen=True)
 class CliffordAlgebra:
-    def __init__(self, p, q, r):
-        self.p = p
-        self.q = q
-        self.r = r
+    p: int
+    q: int
+    r: int
 
     def get_algebra_signature(self):
         return (self.p, self.q, self.r)
-
+    
     def to_ir(self, builder):
         return builder.get_algebra(self.p, self.q, self.r)
 
