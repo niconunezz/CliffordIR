@@ -79,7 +79,8 @@ class multivector:
         return self.ir_value
 
     def __repr__(self):
-        return f"tensor<{self.shape}xmultivector<{self.mask}, {self.dtype}>>"
+        return f"tensor<{self.shape}xmultivector<{self.mask}, {self.dtype}, {self.algebra}>>"
+
 
 # clifford ops
 
