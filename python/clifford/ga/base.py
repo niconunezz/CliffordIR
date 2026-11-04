@@ -1,6 +1,8 @@
 from .._C.libclifford import ir
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import NamedTuple, Tuple, List
+from abc import ABC, abstractmethod
 import torch
 
 @dataclass(frozen=True)
@@ -15,72 +17,65 @@ class CliffordAlgebra:
     def to_ir(self, builder):
         return builder.get_algebra(self.p, self.q, self.r)
 
-class ObjectKind(Enum):
-    Euclidean = auto()
-    Ideal = auto()
-    Unknown = auto()
 
-class GeometricKind(Enum):
-    Point = auto()
-    Line = auto()
-    Plane = auto()
+class Type(ABC):
 
-class GeometricElement:
-    def __init__(self, geo_kind, obj_kind, normalized, algebra):
-        self.geo_kind = geo_kind
-        self.obj_kind = obj_kind
-        self.normalized = normalized
-        self.algebra = algebra
-
-    def get_object_kind(self) -> GeometricKind:
-        return self.geo_kind
-
-
-class scalar_dtype:
-    FLOAT_DTYPES = ['fp32']
-    
-    def __init__(self, name):
-        self.name = name
-
+    @abstractmethod
     def to_ir(self, builder):
-        if self.name == "fp32":
+        ...
+
+
+@dataclass(frozen=True)
+class ScalarType(Type):
+    name : str
+    
+    def to_ir(self, builder):
+        if self.name == "f32":
             return builder.get_f32ty()
 
-fp32 = scalar_dtype("fp32")
+        else:
+            raise NotImplementedError(f"type {self.name} is not supported")
 
-def get_tensor_dtype(dtype : str):
-    dtype = str(dtype)
-    return dtype.split(".")[-1]
+@dataclass(frozen=True)
+class MultivectorType(Type):
+    mask : int
+    algebra : CliffordAlgebra
+    dtype : Type
 
-def torch_to_cliff_dtypes(dtype : str):
-    lookup = {"float32" : "fp32"}
-    return lookup[dtype]
+    def to_ir(self, builder):
+        ir_scalar_dtype = self.dtype.to_ir(builder)
+        algebra = self.algebra
+        mask = self.mask
+        ir_algebra = algebra.to_ir(builder)
+        return builder.get_multivector_ty(mask, ir_scalar_dtype, ir_algebra)
 
-class multivector:
-    def __init__(self, mask, data, algebra : CliffordAlgebra):
+
+
+@dataclass(frozen=True)
+class PointerType(Type):
+    dtype : Type
+
+    def to_ir(self, builder):
+        return builder.get_pointer_ty(self.dtype.to_ir(builder))
+
+
+class Tensor:
+    def __init__(self, type, shape, data_ptr, data=None):
+        self.type : Type = type
         self.data = data
-        assert(isinstance(data, torch.Tensor)), "data should be a torch.tensor"
-        self.data_ptr = data.data_ptr
-        self.dtype = get_tensor_dtype(data.dtype)
-        self.mask = mask if mask is None else int(mask) 
-        self.algebra = algebra
-        self.shape = tuple([shape for shape in data.size()])
-        self.ir_value = None
+        self.shape = shape
+        self.data_ptr = data_ptr
 
-    def to_ir(self, builder, str_to_ty_func):
-        ir_scalar_dtype = str_to_ty_func(self.dtype).to_ir(builder)
-        if self.mask is None:
-            return builder.get_pointer_ty(ir_scalar_dtype)
+    def to_ir(self, builder):
+        return builder.get_ranked_tensor_ty(self.shape, self.type.to_ir(builder))
         
-        ir_algebra = self.algebra.to_ir(builder)
-        mv_ty = builder.get_multivector_ty(self.mask, ir_scalar_dtype, ir_algebra)
-        self.ir_value = builder.get_ranked_tensor_ty(self.shape[1:], mv_ty)
-
-        return self.ir_value
-
     def __repr__(self):
-        return f"tensor<{self.shape}xmultivector<{self.mask}, {self.dtype}, {self.algebra}>>"
+        return f"tensor<{self.shape}x{self.type}>"
 
+
+# types
+
+fp32 = ScalarType("f32")
 
 # clifford ops
 

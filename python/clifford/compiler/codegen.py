@@ -1,6 +1,6 @@
 import ast
-from .._C.libclifford import ir, passes
-from ..ga import str_to_ty, CliffordFrontend
+from .._C.libclifford import ir
+from ..ga import CliffordFrontend
 
 
 class CodeGenerator(ast.NodeVisitor):
@@ -23,12 +23,12 @@ class CodeGenerator(ast.NodeVisitor):
             self.module = self.builder.create_module()
 
 
-    def init_locals(self, entry_block):
+    def _init_locals(self, entry_block):
         arguments = entry_block.get_arguments()
         for (k, arg) in zip(self.signature.keys(), arguments):
-            self.set_local_value(k, arg)
+            self._set_local_value(k, arg)
 
-    def set_local_value(self, target, value):
+    def _set_local_value(self, target, value):
         self.locals[target] = value
 
     def lookup_name(self, name):
@@ -42,26 +42,27 @@ class CodeGenerator(ast.NodeVisitor):
             raise NotImplementedError("compiled functions cannot be nested! create two separate functions")
         sym_name = node.name
         
-        fn_ty = self.fn_ty.build_fn_ty(str_to_ty, self.builder)
+        fn_ty = self.fn_ty.build_fn_ty(self.builder)
         visibility = "public"
         self.fn = self.builder.get_function_def(sym_name, fn_ty, visibility)
         self.module.push_back(self.fn)
         entry = self.fn.add_entry_block()
         self.builder.set_insertion_point_to_start(entry)
-        self.init_locals(entry)
+        self._init_locals(entry)
         self.generic_visit(node)
 
     def visit_arg(self, node):
-        if hasattr(node, "ctx"):
+        if hasattr(node, "ctx") or hasattr(node, "value"):
             return self.visit(node)
-        if hasattr(node, "value"):
-            return node.value
         if hasattr(node, "annotation"):
             return
         else:
             print(node)
             raise Exception("Argument type unknown")
 
+    def visit_Constant(self, node):
+        return node.value
+    
     def visit_Name(self, node):
         return self.lookup_name(node.id)
 
@@ -71,7 +72,7 @@ class CodeGenerator(ast.NodeVisitor):
         target = targets[0]
         target_name = target.id
         value = self.visit(node.value)
-        self.set_local_value(target_name, value.get_result())
+        self._set_local_value(target_name, value.get_result())
 
     def visit_Call(self, node):
         fn = self.visit(node.func)
@@ -99,12 +100,12 @@ class FunctionType:
         self.inputs = inputs
         self.results = results
 
-    def to_ir_list(self, builder, str_to_ty_func, types):
-        return [ty.to_ir(builder, str_to_ty_func) for ty in types]
+    def _to_ir_list(self, builder, types):
+        return [ty.to_ir(builder) for ty in types]
 
-    def build_fn_ty(self, str_to_ty_func, builder):
-        input_ir_list = self.to_ir_list(builder, str_to_ty_func, self.inputs)
-        result_ir_list = self.to_ir_list(builder, str_to_ty_func, self.results)
+    def build_fn_ty(self, builder):
+        input_ir_list = self._to_ir_list(builder, self.inputs)
+        result_ir_list = self._to_ir_list(builder, self.results)
         return builder.get_function_type(input_ir_list, result_ir_list)
 
 

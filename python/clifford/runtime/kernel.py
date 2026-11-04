@@ -3,8 +3,6 @@ import ast
 import textwrap
 import re
 from ..compiler.compiler import compile, ASTStruct
-from .driver import GPUDriver
-from .cache import get_cache_key, CacheManager 
 import hashlib
 
 def get_def_line(raw_src, starting_line_number):
@@ -72,14 +70,13 @@ class KernelFunction(KernelCallable):
 
     def _compile(self, signature):
         struct = self.ASTStruct(self, signature)
-        return compile(self, struct)
+        return compile(struct)
 
     def __call__(self, *args):        
         signature = self.get_signature(args)
         
         compiled_asm = self._compile(signature)
         compiled_asm.run_kernel(0, args)
-
 
 
 def kernel(fn):

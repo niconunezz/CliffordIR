@@ -141,9 +141,8 @@ class CompileTimer:
 
     
 
-def compile(fn, struct, timeit=True):
+def compile(struct, timeit=True):
 
-    timer = CompileTimer()
     context = ir.context()
     key = get_cache_key(struct)
     hash = hashlib.sha256(key.encode("utf-8")).hexdigest()

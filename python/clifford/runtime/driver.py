@@ -5,7 +5,6 @@ class GPUDriver:
     def __init__(self, compiled_asm):
         self.compiled_asm = compiled_asm
     
-    
 
 
 class CUDALauncher:
@@ -17,7 +16,7 @@ class CUDALauncher:
         num_blocks = max(total_threads//(256), 1)
         num_threads = min(total_threads, 256)
         stream = torch.cuda.current_stream().cuda_stream
-        arg_ptrs = [a.data_ptr() for a in args]
+        arg_ptrs = [a.data_ptr for a in args]
         grid = [num_blocks, 1, 1]
         blockDim = [num_threads, 1, 1]
 
